@@ -1255,16 +1255,67 @@ function handleDialogueClick() {
    클릭 이벤트
    ================================================= */
 
-document
-    .getElementById("dialogueBox")
-    .onclick =
-    handleDialogueClick;
+function handleDialogueClick() {
+
+    if (dialogueMode === "shake") {
+
+        nextShakeDialogue();
+
+        return;
+
+    }
+
+    if (dialogueMode === "idle") {
+
+        nextIdleDialogue();
+
+        return;
+
+    }
+
+    if (dialogueMode === "normal") {
+
+        nextNormalDialogue();
+
+        return;
+
+    }
+
+}
 
 
-document
-    .getElementById("characterArea")
-    .onclick =
-    handleDialogueClick;
+/* =================================================
+   대화창 클릭
+   ================================================= */
+
+var dialogueBox =
+    document.getElementById("dialogueBox");
+
+if (dialogueBox) {
+
+    dialogueBox.addEventListener(
+        "click",
+        handleDialogueClick
+    );
+
+}
+
+
+/* =================================================
+   캐릭터 클릭
+   ================================================= */
+
+var characterArea =
+    document.getElementById("characterArea");
+
+if (characterArea) {
+
+    characterArea.addEventListener(
+        "click",
+        handleDialogueClick
+    );
+
+}
 
 
 /* =================================================
