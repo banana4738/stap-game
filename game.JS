@@ -337,15 +337,10 @@ var shakeDialogues = [
 
 
 /* =================================================
-   타이머
+   상태 변수
    ================================================= */
 
 var idleTimer = null;
-
-
-/* =================================================
-   대화 단계
-   ================================================= */
 
 var idleCount = 0;
 
@@ -355,18 +350,20 @@ var shakeDialogueIndex = 0;
 
 
 /* =================================================
-   센서
+   센서 변수
    ================================================= */
 
 var lastStepTime = 0;
 
 var lastShakeTime = 0;
 
-var stepThreshold = 12;
+var stepThreshold = 11;
+
+var shakeThreshold = 17;
 
 
 /* =================================================
-   걸음 수 표시
+   화면에 걸음 수 표시
    ================================================= */
 
 function updateStepDisplay() {
@@ -378,7 +375,7 @@ function updateStepDisplay() {
 
 
 /* =================================================
-   현재 마일스톤
+   현재 마일스톤 찾기
    ================================================= */
 
 function getCurrentMilestone() {
@@ -408,7 +405,7 @@ function getCurrentMilestone() {
 
 
 /* =================================================
-   타이머 완전히 취소
+   타이머 제거
    ================================================= */
 
 function clearIdleTimer() {
@@ -439,6 +436,8 @@ function startDialogue(step) {
         return;
 
     }
+
+    clearIdleTimer();
 
     dialogueMode =
         "normal";
@@ -527,7 +526,7 @@ function nextNormalDialogue() {
 
 
 /* =================================================
-   가만히 있기 타이머 시작
+   가만히 있기 타이머
    ================================================= */
 
 function resetIdleTimer() {
@@ -541,11 +540,6 @@ function resetIdleTimer() {
         return;
 
     }
-
-    /*
-       일반 상태에서만
-       30초 타이머를 만든다.
-    */
 
     if (
         dialogueMode !== "normal"
@@ -662,11 +656,6 @@ function nextIdleDialogue() {
     }
 
 
-    /*
-       현재 대화가 아직 남아있으면
-       다음 문장으로.
-    */
-
     if (
         idleDialogueIndex <
         lines.length - 1
@@ -682,8 +671,8 @@ function nextIdleDialogue() {
 
 
     /*
-       한 묶음이 끝났다.
-       다음 가만히 있기 대사로 이동.
+       한 묶음이 끝나면
+       다음 묶음으로.
     */
 
     if (
@@ -713,10 +702,14 @@ function nextIdleDialogue() {
 function startShakeDialogue() {
 
     /*
-       다른 대화와 타이머를 전부 끊는다.
+       30초 타이머 완전 취소
     */
 
     clearIdleTimer();
+
+    /*
+       흔들기 상태
+    */
 
     dialogueMode =
         "shake";
@@ -772,7 +765,7 @@ function nextShakeDialogue() {
 
 
         /*
-           마지막 대사에서 진동.
+           마지막 대사에서 진동
         */
 
         if (
@@ -798,8 +791,7 @@ function nextShakeDialogue() {
 
 
     /*
-       흔들기 대화가 끝났다.
-       다시 일반 상태로 돌아간다.
+       흔들기 대사가 끝남
     */
 
     dialogueMode =
@@ -815,7 +807,7 @@ function nextShakeDialogue() {
 
 
 /* =================================================
-   걸음 추가
+   걸음 수 추가
    ================================================= */
 
 function addSteps(amount) {
@@ -838,8 +830,8 @@ function addSteps(amount) {
 
 
     /*
-       걷기 시작하면
-       가만히 있기 대화를 종료한다.
+       걸음을 감지하면
+       가만히 있기 상태 종료
     */
 
     if (
@@ -857,8 +849,8 @@ function addSteps(amount) {
 
 
     /*
-       걷는 동안 흔들기 대사였다면
-       흔들기 대사는 그대로 유지한다.
+       흔들기 대사 중에는
+       타이머를 건드리지 않는다.
     */
 
     if (
@@ -890,7 +882,7 @@ function addSteps(amount) {
 
 
 /* =================================================
-   실제 걸음 감지
+   걸음 감지
    ================================================= */
 
 function detectStep(event) {
@@ -929,11 +921,11 @@ function detectStep(event) {
 
     /*
        흔들기 직후에는
-       같은 움직임을 걸음으로 세지 않는다.
+       중복 걸음으로 세지 않는다.
     */
 
     if (
-        now - lastShakeTime < 1500
+        now - lastShakeTime < 1200
     ) {
 
         return;
@@ -941,9 +933,13 @@ function detectStep(event) {
     }
 
 
+    /*
+       걸음 감지
+    */
+
     if (
         magnitude > stepThreshold &&
-        now - lastStepTime > 400
+        now - lastStepTime > 350
     ) {
 
         lastStepTime =
@@ -957,7 +953,7 @@ function detectStep(event) {
 
 
 /* =================================================
-   휴대폰 흔들기 감지
+   흔들기 감지
    ================================================= */
 
 function detectShake(event) {
@@ -995,11 +991,11 @@ function detectShake(event) {
 
 
     /*
-       너무 자주 발동하지 않는다.
+       너무 자주 발동하지 않음
     */
 
     if (
-        now - lastShakeTime < 5000
+        now - lastShakeTime < 4000
     ) {
 
         return;
@@ -1009,11 +1005,11 @@ function detectShake(event) {
 
     /*
        최근에 걸음을 감지했다면
-       달리기/걷기로 본다.
+       달리기/걷기로 판단.
     */
 
     if (
-        now - lastStepTime < 1500
+        now - lastStepTime < 900
     ) {
 
         return;
@@ -1022,12 +1018,11 @@ function detectShake(event) {
 
 
     /*
-       일반 걸음보다 큰 움직임만
-       흔들기로 판정한다.
+       흔들기 감도
     */
 
     if (
-        magnitude > 22
+        magnitude > shakeThreshold
     ) {
 
         lastShakeTime =
@@ -1121,11 +1116,6 @@ if (
 
 function handleDialogueClick() {
 
-
-    /*
-       흔들기 대화 중
-    */
-
     if (
         dialogueMode === "shake"
     ) {
@@ -1137,10 +1127,6 @@ function handleDialogueClick() {
     }
 
 
-    /*
-       가만히 있기 대화 중
-    */
-
     if (
         dialogueMode === "idle"
     ) {
@@ -1151,10 +1137,6 @@ function handleDialogueClick() {
 
     }
 
-
-    /*
-       일반 대화 중
-    */
 
     if (
         dialogueMode === "normal"
