@@ -600,3 +600,71 @@ if (
     }
 
 }
+/* =================================================
+   가만히 있을 때 재촉
+   ================================================= */
+
+var idleTimer = null;
+var idleDialogueShown = false;
+
+function resetIdleTimer() {
+
+    if (idleTimer) {
+
+        clearTimeout(idleTimer);
+
+    }
+
+    idleDialogueShown = false;
+
+    idleTimer = setTimeout(
+        function() {
+
+            if (steps < 10000) {
+
+                messageElement.textContent =
+                    "뭐야, 왜 갑자기 멈춰? 계속 걸어야지, 감독생!";
+
+                characterImage.src =
+                    "images/4.png";
+
+                if (
+                    navigator.vibrate
+                ) {
+
+                    navigator.vibrate(100);
+
+                }
+
+                idleDialogueShown = true;
+
+            }
+
+        },
+        30000
+    );
+
+}
+
+
+/* =================================================
+   걸음을 걸으면 재촉 타이머 초기화
+   ================================================= */
+
+var originalAddSteps =
+    addSteps;
+
+addSteps = function(amount) {
+
+    originalAddSteps(amount);
+
+    resetIdleTimer();
+
+};
+
+
+/* =================================================
+   시작할 때도 타이머 시작
+   ================================================= */
+
+resetIdleTimer();
