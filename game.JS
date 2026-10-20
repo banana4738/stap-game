@@ -859,6 +859,23 @@ function detectStep(event) {
    흔들기 감지
    ================================================= */
 
+var shakeLastMagnitude = 0;
+
+var shakeChangeCount = 0;
+
+var shakeStartTime = 0;
+
+var shakeWindow = 700;
+
+var shakeChangeThreshold = 3.0;
+
+var shakeRequiredChanges = 4;
+
+
+/* =================================================
+   흔들기 감지
+   ================================================= */
+
 function detectShake(event) {
 
     var acceleration =
@@ -894,7 +911,22 @@ function detectShake(event) {
 
 
     /*
-       너무 자주 발동하지 않음
+       흔들기 대사 중에는
+       다시 발동하지 않음
+    */
+
+    if (
+        dialogueMode === "shake"
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       마지막 흔들기 후 3초 동안
+       다시 발동하지 않음
     */
 
     if (
@@ -907,13 +939,15 @@ function detectShake(event) {
 
 
     /*
-       걸음을 걷는 중에는
-       흔들기로 판단하지 않음
+       첫 센서값 저장
     */
 
     if (
-        now - lastStepTime < 1000
+        shakeLastMagnitude === 0
     ) {
+
+        shakeLastMagnitude =
+            magnitude;
 
         return;
 
@@ -921,161 +955,106 @@ function detectShake(event) {
 
 
     /*
-       휴대폰을 크게 흔들었을 때
-       발동
+       이전 값과 현재 값의 차이
+    */
+
+    var change =
+        Math.abs(
+            magnitude -
+            shakeLastMagnitude
+        );
+
+
+    shakeLastMagnitude =
+        magnitude;
+
+
+    /*
+       큰 변화가 발생하면
+       흔들기 횟수 증가
     */
 
     if (
-        magnitude > 17
+        change >=
+        shakeChangeThreshold
     ) {
 
-        lastShakeTime = now;
+        if (
+            shakeChangeCount === 0
+        ) {
 
-        startShakeDialogue();
+            shakeStartTime =
+                now;
+
+        }
+
+        shakeChangeCount++;
+
+    }
+
+
+    /*
+       700ms 안에 충분히 큰 변화가
+       여러 번 발생하면 흔들기로 판단
+    */
+
+    if (
+        shakeChangeCount >=
+        shakeRequiredChanges
+    ) {
+
+        if (
+            now - shakeStartTime <=
+            shakeWindow
+        ) {
+
+            lastShakeTime =
+                now;
+
+            shakeChangeCount =
+                0;
+
+            shakeLastMagnitude =
+                0;
+
+            startShakeDialogue();
+
+            return;
+
+        }
+
+
+        /*
+           너무 오래 걸렸으면
+           다시 처음부터
+        */
+
+        shakeChangeCount =
+            0;
+
+        shakeStartTime =
+            now;
+
+    }
+
+
+    /*
+       700ms가 지나면
+       흔들기 카운트 초기화
+    */
+
+    if (
+        shakeChangeCount > 0 &&
+        now - shakeStartTime >
+        shakeWindow
+    ) {
+
+        shakeChangeCount =
+            0;
+
+        shakeStartTime =
+            0;
 
     }
 
 }
-
-
-/* =================================================
-   센서 시작
-   ================================================= */
-
-function startMotionSensor() {
-
-    window.addEventListener(
-        "devicemotion",
-        detectStep
-    );
-
-    window.addEventListener(
-        "devicemotion",
-        detectShake
-    );
-
-}
-
-
-/* =================================================
-   센서 권한
-   ================================================= */
-
-if (
-    typeof DeviceMotionEvent !== "undefined"
-) {
-
-    if (
-        typeof DeviceMotionEvent.requestPermission ===
-        "function"
-    ) {
-
-        document.body.addEventListener(
-            "click",
-            function motionPermission() {
-
-                DeviceMotionEvent
-                    .requestPermission()
-                    .then(
-                        function(permission) {
-
-                            if (
-                                permission === "granted"
-                            ) {
-
-                                startMotionSensor();
-
-                            }
-
-                        }
-                    )
-                    .catch(
-                        function(error) {
-
-                            console.log(error);
-
-                        }
-                    );
-
-
-                document.body.removeEventListener(
-                    "click",
-                    motionPermission
-                );
-
-            }
-        );
-
-    } else {
-
-        startMotionSensor();
-
-    }
-
-}
-
-
-/* =================================================
-   화면 클릭
-   ================================================= */
-
-function handleDialogueClick() {
-
-    if (
-        dialogueMode === "shake"
-    ) {
-
-        nextShakeDialogue();
-
-        return;
-
-    }
-
-
-    if (
-        dialogueMode === "idle"
-    ) {
-
-        nextIdleDialogue();
-
-        return;
-
-    }
-
-
-    if (
-        dialogueMode === "normal"
-    ) {
-
-        nextNormalDialogue();
-
-    }
-
-}
-
-
-/* =================================================
-   클릭 이벤트
-   ================================================= */
-
-document
-    .getElementById("dialogueBox")
-    .onclick =
-    handleDialogueClick;
-
-
-document
-    .getElementById("characterArea")
-    .onclick =
-    handleDialogueClick;
-
-
-/* =================================================
-   시작
-   ================================================= */
-
-updateStepDisplay();
-
-startDialogue(0);
-
-resetIdleTimer();
