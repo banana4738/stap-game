@@ -7,29 +7,29 @@
    현재 걸음 수
    ================================================= */
 
-let steps = 0;
+var steps = 0;
 
 
 /* =================================================
    현재 대화
    ================================================= */
 
-let currentStep = 0;
+var currentStep = 0;
 
-let currentDialogueIndex = 0;
+var currentDialogueIndex = 0;
 
 
 /* =================================================
    화면 요소
    ================================================= */
 
-const stepsElement =
+var stepsElement =
     document.getElementById("steps");
 
-const messageElement =
+var messageElement =
     document.getElementById("message");
 
-const characterImage =
+var characterImage =
     document.getElementById("characterImage");
 
 
@@ -37,7 +37,7 @@ const characterImage =
    대사 데이터
    ================================================= */
 
-const dialogues = {
+var dialogues = {
 
     0: [
 
@@ -225,7 +225,7 @@ const dialogues = {
    마일스톤
    ================================================= */
 
-const milestones = [
+var milestones = [
     0,
     50,
     100,
@@ -255,10 +255,10 @@ function updateStepDisplay() {
 
 function getCurrentMilestone() {
 
-    let result = 0;
+    var result = 0;
 
     for (
-        let i = 0;
+        var i = 0;
         i < milestones.length;
         i++
     ) {
@@ -310,7 +310,7 @@ function startDialogue(step) {
 
 function showDialogue() {
 
-    const lines =
+    var lines =
         dialogues[currentStep];
 
     if (!lines) {
@@ -319,7 +319,7 @@ function showDialogue() {
 
     }
 
-    const dialogue =
+    var dialogue =
         lines[currentDialogueIndex];
 
     if (!dialogue) {
@@ -345,7 +345,7 @@ function showDialogue() {
 
 function nextDialogue() {
 
-    const lines =
+    var lines =
         dialogues[currentStep];
 
     if (!lines) {
@@ -383,7 +383,7 @@ function nextDialogue() {
 
 function setSteps(newSteps) {
 
-    const oldMilestone =
+    var oldMilestone =
         getCurrentMilestone();
 
     steps =
@@ -391,7 +391,7 @@ function setSteps(newSteps) {
 
     updateStepDisplay();
 
-    const newMilestone =
+    var newMilestone =
         getCurrentMilestone();
 
     if (
@@ -414,7 +414,7 @@ function setSteps(newSteps) {
 
 function addSteps(amount) {
 
-    const oldMilestone =
+    var oldMilestone =
         getCurrentMilestone();
 
     steps += amount;
@@ -430,7 +430,7 @@ function addSteps(amount) {
 
     updateStepDisplay();
 
-    const newMilestone =
+    var newMilestone =
         getCurrentMilestone();
 
     if (
