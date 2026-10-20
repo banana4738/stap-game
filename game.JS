@@ -480,3 +480,113 @@ document
 updateStepDisplay();
 
 startDialogue(0);
+/* =================================================
+   휴대폰 움직임 센서
+   ================================================= */
+
+var lastMotionTime = 0;
+var motionCount = 0;
+
+function handleMotion(event) {
+
+    var acceleration =
+        event.accelerationIncludingGravity;
+
+    if (!acceleration) {
+        return;
+    }
+
+    var x = acceleration.x || 0;
+    var y = acceleration.y || 0;
+    var z = acceleration.z || 0;
+
+    var magnitude =
+        Math.sqrt(
+            x * x +
+            y * y +
+            z * z
+        );
+
+    var now = new Date().getTime();
+
+    if (
+        magnitude > 12 &&
+        now - lastMotionTime > 400
+    ) {
+
+        lastMotionTime = now;
+        motionCount++;
+
+        addSteps(1);
+
+        if (
+            typeof navigator.vibrate === "function"
+        ) {
+            navigator.vibrate(50);
+        }
+
+    }
+
+}
+
+
+/* =================================================
+   움직임 센서 시작
+   ================================================= */
+
+if (
+    typeof DeviceMotionEvent !== "undefined"
+) {
+
+    if (
+        typeof DeviceMotionEvent.requestPermission === "function"
+    ) {
+
+        document.body.addEventListener(
+            "click",
+            function requestMotion() {
+
+                DeviceMotionEvent
+                    .requestPermission()
+                    .then(
+                        function(permission) {
+
+                            if (
+                                permission === "granted"
+                            ) {
+
+                                window.addEventListener(
+                                    "devicemotion",
+                                    handleMotion
+                                );
+
+                            }
+
+                        }
+                    )
+                    .catch(
+                        function(error) {
+
+                            console.log(error);
+
+                        }
+                    );
+
+                document.body.removeEventListener(
+                    "click",
+                    requestMotion
+                );
+
+            }
+        );
+
+    } else {
+
+        window.addEventListener(
+            "devicemotion",
+            handleMotion
+        );
+
+    }
+
+}
