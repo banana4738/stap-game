@@ -480,11 +480,14 @@ document
 updateStepDisplay();
 
 startDialogue(0);
+
+
 /* =================================================
    실제 걸음 감지
    ================================================= */
 
 var lastStepTime = 0;
+var lastShakeTime = 0;
 var stepThreshold = 12;
 
 function detectStep(event) {
@@ -493,12 +496,19 @@ function detectStep(event) {
         event.accelerationIncludingGravity;
 
     if (!acceleration) {
+
         return;
+
     }
 
-    var x = acceleration.x || 0;
-    var y = acceleration.y || 0;
-    var z = acceleration.z || 0;
+    var x =
+        acceleration.x || 0;
+
+    var y =
+        acceleration.y || 0;
+
+    var z =
+        acceleration.z || 0;
 
     var magnitude =
         Math.sqrt(
@@ -510,12 +520,48 @@ function detectStep(event) {
     var now =
         new Date().getTime();
 
+
+    /* =================================================
+       휴대폰 흔들기 감지
+       ================================================= */
+
+    if (
+        magnitude > 20 &&
+        now - lastShakeTime > 5000 &&
+        steps < 10000
+    ) {
+
+        lastShakeTime =
+            now;
+
+        messageElement.textContent =
+            "잠깐! 지금 뭐 하는 거야, 감독생?";
+
+        characterImage.src =
+            "images/4.png";
+
+        if (
+            navigator.vibrate
+        ) {
+
+            navigator.vibrate(100);
+
+        }
+
+    }
+
+
+    /* =================================================
+       걸음 판정
+       ================================================= */
+
     if (
         magnitude > stepThreshold &&
         now - lastStepTime > 400
     ) {
 
-        lastStepTime = now;
+        lastStepTime =
+            now;
 
         addSteps(1);
 
@@ -600,6 +646,8 @@ if (
     }
 
 }
+
+
 /* =================================================
    가만히 있을 때 재촉
    ================================================= */
@@ -641,7 +689,7 @@ function resetIdleTimer() {
             }
 
         },
-        5000
+        30000
     );
 
 }
