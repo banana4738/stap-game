@@ -15,7 +15,6 @@ var steps = 0;
    ================================================= */
 
 var currentStep = 0;
-
 var currentDialogueIndex = 0;
 
 
@@ -354,9 +353,6 @@ function nextDialogue() {
 
     }
 
-
-    /* 마지막 대사 */
-
     if (
         currentDialogueIndex >=
         lines.length - 1
@@ -368,7 +364,6 @@ function nextDialogue() {
         return;
 
     }
-
 
     currentDialogueIndex++;
 
@@ -474,12 +469,223 @@ document
 
 
 /* =================================================
-   시작
+   가만히 있을 때 대사
    ================================================= */
 
-updateStepDisplay();
+var idleDialogues = [
 
-startDialogue(0);
+    [
+
+        {
+            text: "힘들어서 더 이상 못 걷겠어?",
+            emotion: 7
+        },
+
+        {
+            text: "감독생 이렇게 체력이 없어서야~",
+            emotion: 6
+        },
+
+        {
+            text: "뭐, 그러면 잠깐동안은 기다려줄게.",
+            emotion: 3
+        }
+
+    ],
+
+
+    [
+
+        {
+            text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
+            emotion: 1
+        },
+
+        {
+            text: "내가 계속 응원... 아니, 응원이라고 해야하나.",
+            emotion: 7
+        },
+
+        {
+            text: "곁에 있을테니까.",
+            emotion: 5
+        }
+
+    ],
+
+
+    [
+
+        {
+            text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
+            emotion: 1
+        },
+
+        {
+            text: "...",
+            emotion: 7
+        },
+
+        {
+            text: "감독생? 나 그런 거 안 봐주거든.",
+            emotion: 4
+        },
+
+        {
+            text: "내가 이런 거에선 좀 깐깐해서 말이야.",
+            emotion: 3
+        },
+
+        {
+            text: "일어나!",
+            emotion: 4
+        }
+
+    ]
+
+];
+
+
+var idleTimer = null;
+
+var idleCount = 0;
+
+var idleDialogueIndex = 0;
+
+
+/* =================================================
+   가만히 있기 대사 표시
+   ================================================= */
+
+function showIdleDialogue() {
+
+    if (
+        steps >= 10000
+    ) {
+
+        return;
+
+    }
+
+    var lines =
+        idleDialogues[idleCount];
+
+    if (!lines) {
+
+        return;
+
+    }
+
+    idleDialogueIndex =
+        0;
+
+    messageElement.textContent =
+        lines[idleDialogueIndex].text;
+
+    characterImage.src =
+        "images/" +
+        lines[idleDialogueIndex].emotion +
+        ".png";
+
+}
+
+
+/* =================================================
+   가만히 있기 다음 대사
+   ================================================= */
+
+function nextIdleDialogue() {
+
+    var lines =
+        idleDialogues[idleCount];
+
+    if (!lines) {
+
+        return;
+
+    }
+
+    if (
+        idleDialogueIndex >=
+        lines.length - 1
+    ) {
+
+        return;
+
+    }
+
+    idleDialogueIndex++;
+
+    messageElement.textContent =
+        lines[idleDialogueIndex].text;
+
+    characterImage.src =
+        "images/" +
+        lines[idleDialogueIndex].emotion +
+        ".png";
+
+}
+
+
+/* =================================================
+   가만히 있기 타이머
+   ================================================= */
+
+function resetIdleTimer() {
+
+    if (idleTimer) {
+
+        clearTimeout(idleTimer);
+
+    }
+
+    idleTimer =
+        setTimeout(
+            function() {
+
+                if (
+                    steps >= 10000
+                ) {
+
+                    return;
+
+                }
+
+                if (
+                    idleCount >=
+                    idleDialogues.length
+                ) {
+
+                    idleCount =
+                        idleDialogues.length - 1;
+
+                }
+
+                showIdleDialogue();
+
+                if (
+                    idleCount === 2
+                ) {
+
+                    if (
+                        navigator.vibrate
+                    ) {
+
+                        navigator.vibrate(
+                            [300, 150, 300]
+                        );
+
+                    }
+
+                }
+
+                idleCount++;
+
+            },
+            30000
+        );
+
+}
 
 
 /* =================================================
@@ -487,8 +693,9 @@ startDialogue(0);
    ================================================= */
 
 var lastStepTime = 0;
-var lastShakeTime = 0;
+
 var stepThreshold = 12;
+
 
 function detectStep(event) {
 
@@ -521,40 +728,6 @@ function detectStep(event) {
         new Date().getTime();
 
 
-    /* =================================================
-       휴대폰 흔들기 감지
-       ================================================= */
-
-    if (
-        magnitude > 20 &&
-        now - lastShakeTime > 5000 &&
-        steps < 10000
-    ) {
-
-        lastShakeTime =
-            now;
-
-        messageElement.textContent =
-            "잠깐! 지금 뭐 하는 거야, 감독생?";
-
-        characterImage.src =
-            "images/4.png";
-
-        if (
-            navigator.vibrate
-        ) {
-
-            navigator.vibrate(100);
-
-        }
-
-    }
-
-
-    /* =================================================
-       걸음 판정
-       ================================================= */
-
     if (
         magnitude > stepThreshold &&
         now - lastStepTime > 400
@@ -579,6 +752,122 @@ function detectStep(event) {
 
 
 /* =================================================
+   휴대폰 흔들기 감지
+   ================================================= */
+
+var lastShakeTime = 0;
+
+
+function detectShake(event) {
+
+    var acceleration =
+        event.accelerationIncludingGravity;
+
+    if (!acceleration) {
+
+        return;
+
+    }
+
+    var x =
+        acceleration.x || 0;
+
+    var y =
+        acceleration.y || 0;
+
+    var z =
+        acceleration.z || 0;
+
+    var magnitude =
+        Math.sqrt(
+            x * x +
+            y * y +
+            z * z
+        );
+
+    var now =
+        new Date().getTime();
+
+
+    if (
+        magnitude > 20 &&
+        now - lastShakeTime > 5000 &&
+        steps < 10000
+    ) {
+
+        lastShakeTime =
+            now;
+
+        messageElement.textContent =
+            "... 너 뭐하냐?";
+
+        characterImage.src =
+            "images/4.png";
+
+
+        if (
+            navigator.vibrate
+        ) {
+
+            navigator.vibrate(100);
+
+        }
+
+
+        setTimeout(
+            function() {
+
+                if (
+                    steps < 10000
+                ) {
+
+                    messageElement.textContent =
+                        "지금 안 걷고 있지? 어?";
+
+                    characterImage.src =
+                        "images/1.png";
+
+                }
+
+            },
+            1500
+        );
+
+
+        setTimeout(
+            function() {
+
+                if (
+                    steps < 10000
+                ) {
+
+                    messageElement.textContent =
+                        "잔머리 쓰지 말고 똑바로 걸으라고!";
+
+                    characterImage.src =
+                        "images/4.png";
+
+
+                    if (
+                        navigator.vibrate
+                    ) {
+
+                        navigator.vibrate(200);
+
+                    }
+
+                }
+
+            },
+            3000
+        );
+
+    }
+
+}
+
+
+/* =================================================
    센서 시작
    ================================================= */
 
@@ -587,6 +876,11 @@ function startMotionSensor() {
     window.addEventListener(
         "devicemotion",
         detectStep
+    );
+
+    window.addEventListener(
+        "devicemotion",
+        detectShake
     );
 
 }
@@ -649,70 +943,83 @@ if (
 
 
 /* =================================================
-   가만히 있을 때 재촉
-   ================================================= */
-
-var idleTimer = null;
-var idleDialogueShown = false;
-
-function resetIdleTimer() {
-
-    if (idleTimer) {
-
-        clearTimeout(idleTimer);
-
-    }
-
-    idleDialogueShown = false;
-
-    idleTimer = setTimeout(
-        function() {
-
-            if (steps < 10000) {
-
-                messageElement.textContent =
-                    "뭐야, 왜 갑자기 멈춰? 계속 걸어야지, 감독생!";
-
-                characterImage.src =
-                    "images/4.png";
-
-                if (
-                    navigator.vibrate
-                ) {
-
-                    navigator.vibrate(100);
-
-                }
-
-                idleDialogueShown = true;
-
-            }
-
-        },
-        30000
-    );
-
-}
-
-
-/* =================================================
-   걸음을 걸으면 재촉 타이머 초기화
+   걸음이 발생하면 가만히 있기 타이머 초기화
    ================================================= */
 
 var originalAddSteps =
     addSteps;
 
-addSteps = function(amount) {
 
-    originalAddSteps(amount);
+addSteps =
+    function(amount) {
 
-    resetIdleTimer();
+        originalAddSteps(amount);
 
-};
+        idleCount = 0;
+
+        idleDialogueIndex = 0;
+
+        resetIdleTimer();
+
+    };
 
 
 /* =================================================
-   시작할 때도 타이머 시작
+   가만히 있기 대사 클릭 처리
    ================================================= */
+
+document
+    .getElementById("dialogueBox")
+    .addEventListener(
+        "click",
+        function() {
+
+            var lines =
+                idleDialogues[idleCount];
+
+            if (
+                lines &&
+                idleDialogueIndex <
+                lines.length - 1
+            ) {
+
+                nextIdleDialogue();
+
+            }
+
+        }
+    );
+
+
+document
+    .getElementById("characterArea")
+    .addEventListener(
+        "click",
+        function() {
+
+            var lines =
+                idleDialogues[idleCount];
+
+            if (
+                lines &&
+                idleDialogueIndex <
+                lines.length - 1
+            ) {
+
+                nextIdleDialogue();
+
+            }
+
+        }
+    );
+
+
+/* =================================================
+   시작
+   ================================================= */
+
+updateStepDisplay();
+
+startDialogue(0);
 
 resetIdleTimer();
