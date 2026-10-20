@@ -641,7 +641,7 @@ function resetIdleTimer() {
             }
 
         },
-        30000
+        5000
     );
 
 }
