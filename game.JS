@@ -19,6 +19,17 @@ var currentDialogueIndex = 0;
 
 
 /* =================================================
+   대화 상태
+
+   normal = 일반 걸음수 대사
+   idle   = 가만히 있을 때 대사
+   shake  = 휴대폰 흔들기 대사
+   ================================================= */
+
+var dialogueMode = "normal";
+
+
+/* =================================================
    화면 요소
    ================================================= */
 
@@ -33,7 +44,7 @@ var characterImage =
 
 
 /* =================================================
-   대사 데이터
+   일반 걸음수 대사
    ================================================= */
 
 var dialogues = {
@@ -237,238 +248,6 @@ var milestones = [
 
 
 /* =================================================
-   걸음 수 표시
-   ================================================= */
-
-function updateStepDisplay() {
-
-    stepsElement.textContent =
-        steps + "보";
-
-}
-
-
-/* =================================================
-   현재 마일스톤 찾기
-   ================================================= */
-
-function getCurrentMilestone() {
-
-    var result = 0;
-
-    for (
-        var i = 0;
-        i < milestones.length;
-        i++
-    ) {
-
-        if (
-            steps >= milestones[i]
-        ) {
-
-            result =
-                milestones[i];
-
-        }
-
-    }
-
-    return result;
-
-}
-
-
-/* =================================================
-   대화 시작
-   ================================================= */
-
-function startDialogue(step) {
-
-    if (
-        !dialogues[step]
-    ) {
-
-        return;
-
-    }
-
-    currentStep =
-        step;
-
-    currentDialogueIndex =
-        0;
-
-    showDialogue();
-
-}
-
-
-/* =================================================
-   대사 표시
-   ================================================= */
-
-function showDialogue() {
-
-    var lines =
-        dialogues[currentStep];
-
-    if (!lines) {
-
-        return;
-
-    }
-
-    var dialogue =
-        lines[currentDialogueIndex];
-
-    if (!dialogue) {
-
-        return;
-
-    }
-
-    messageElement.textContent =
-        dialogue.text;
-
-    characterImage.src =
-        "images/" +
-        dialogue.emotion +
-        ".png";
-
-}
-
-
-/* =================================================
-   다음 대사
-   ================================================= */
-
-function nextDialogue() {
-
-    var lines =
-        dialogues[currentStep];
-
-    if (!lines) {
-
-        return;
-
-    }
-
-    if (
-        currentDialogueIndex >=
-        lines.length - 1
-    ) {
-
-        characterImage.src =
-            "images/5.png";
-
-        return;
-
-    }
-
-    currentDialogueIndex++;
-
-    showDialogue();
-
-}
-
-
-/* =================================================
-   걸음 수 설정
-   ================================================= */
-
-function setSteps(newSteps) {
-
-    var oldMilestone =
-        getCurrentMilestone();
-
-    steps =
-        newSteps;
-
-    updateStepDisplay();
-
-    var newMilestone =
-        getCurrentMilestone();
-
-    if (
-        newMilestone !==
-        oldMilestone
-    ) {
-
-        startDialogue(
-            newMilestone
-        );
-
-    }
-
-}
-
-
-/* =================================================
-   걸음 수 추가
-   ================================================= */
-
-function addSteps(amount) {
-
-    var oldMilestone =
-        getCurrentMilestone();
-
-    steps += amount;
-
-    if (
-        steps > 10000
-    ) {
-
-        steps =
-            10000;
-
-    }
-
-    updateStepDisplay();
-
-    var newMilestone =
-        getCurrentMilestone();
-
-    if (
-        newMilestone !==
-        oldMilestone
-    ) {
-
-        startDialogue(
-            newMilestone
-        );
-
-    }
-
-}
-
-
-/* =================================================
-   대화창 클릭
-   ================================================= */
-
-document
-    .getElementById("dialogueBox")
-    .onclick = function() {
-
-        nextDialogue();
-
-    };
-
-
-/* =================================================
-   캐릭터 클릭
-   ================================================= */
-
-document
-    .getElementById("characterArea")
-    .onclick = function() {
-
-        nextDialogue();
-
-    };
-
-
-/* =================================================
    가만히 있을 때 대사
    ================================================= */
 
@@ -546,18 +325,270 @@ var idleDialogues = [
 ];
 
 
+/* =================================================
+   휴대폰 흔들기 대사
+   ================================================= */
+
+var shakeDialogues = [
+
+    {
+        text: "... 너 뭐하냐?",
+        emotion: 4
+    },
+
+    {
+        text: "지금 안 걷고 있지? 어?",
+        emotion: 1
+    },
+
+    {
+        text: "잔머리 쓰지 말고 똑바로 걸으라고!",
+        emotion: 4
+    }
+
+];
+
+
+/* =================================================
+   가만히 있기 상태
+   ================================================= */
+
 var idleTimer = null;
-
 var idleCount = 0;
-
 var idleDialogueIndex = 0;
 
 
 /* =================================================
-   가만히 있기 대사 표시
+   흔들기 상태
    ================================================= */
 
-function showIdleDialogue() {
+var lastShakeTime = 0;
+var shakeDialogueIndex = 0;
+var shakeTimeout1 = null;
+var shakeTimeout2 = null;
+
+
+/* =================================================
+   걸음 감지
+   ================================================= */
+
+var lastStepTime = 0;
+
+var stepThreshold = 12;
+
+
+/* =================================================
+   걸음 수 표시
+   ================================================= */
+
+function updateStepDisplay() {
+
+    stepsElement.textContent =
+        steps + "보";
+
+}
+
+
+/* =================================================
+   현재 마일스톤 찾기
+   ================================================= */
+
+function getCurrentMilestone() {
+
+    var result = 0;
+
+    for (
+        var i = 0;
+        i < milestones.length;
+        i++
+    ) {
+
+        if (
+            steps >= milestones[i]
+        ) {
+
+            result =
+                milestones[i];
+
+        }
+
+    }
+
+    return result;
+
+}
+
+
+/* =================================================
+   일반 대화 시작
+   ================================================= */
+
+function startDialogue(step) {
+
+    if (
+        !dialogues[step]
+    ) {
+
+        return;
+
+    }
+
+    dialogueMode = "normal";
+
+    currentStep =
+        step;
+
+    currentDialogueIndex =
+        0;
+
+    showDialogue();
+
+}
+
+
+/* =================================================
+   일반 대사 표시
+   ================================================= */
+
+function showDialogue() {
+
+    var lines =
+        dialogues[currentStep];
+
+    if (!lines) {
+
+        return;
+
+    }
+
+    var dialogue =
+        lines[currentDialogueIndex];
+
+    if (!dialogue) {
+
+        return;
+
+    }
+
+    messageElement.textContent =
+        dialogue.text;
+
+    characterImage.src =
+        "images/" +
+        dialogue.emotion +
+        ".png";
+
+}
+
+
+/* =================================================
+   일반 대화 다음 대사
+   ================================================= */
+
+function nextNormalDialogue() {
+
+    var lines =
+        dialogues[currentStep];
+
+    if (!lines) {
+
+        return;
+
+    }
+
+    if (
+        currentDialogueIndex >=
+        lines.length - 1
+    ) {
+
+        characterImage.src =
+            "images/5.png";
+
+        return;
+
+    }
+
+    currentDialogueIndex++;
+
+    showDialogue();
+
+}
+
+
+/* =================================================
+   걸음 수 추가
+   ================================================= */
+
+function addSteps(amount) {
+
+    var oldMilestone =
+        getCurrentMilestone();
+
+    steps += amount;
+
+    if (
+        steps > 10000
+    ) {
+
+        steps = 10000;
+
+    }
+
+    updateStepDisplay();
+
+    /*
+       걸음을 걸었다면
+       가만히 있기 대화는 취소한다.
+    */
+
+    stopIdleDialogue();
+
+    if (
+        steps < 10000
+    ) {
+
+        resetIdleTimer();
+
+    }
+
+    var newMilestone =
+        getCurrentMilestone();
+
+    if (
+        newMilestone !== oldMilestone
+    ) {
+
+        startDialogue(
+            newMilestone
+        );
+
+    }
+
+}
+
+
+/* =================================================
+   가만히 있기 대화 멈추기
+   ================================================= */
+
+function stopIdleDialogue() {
+
+    if (idleTimer) {
+
+        clearTimeout(idleTimer);
+
+        idleTimer = null;
+
+    }
+
+}
+
+
+/* =================================================
+   가만히 있기 대화 시작
+   ================================================= */
+
+function startIdleDialogue() {
 
     if (
         steps >= 10000
@@ -566,6 +597,43 @@ function showIdleDialogue() {
         return;
 
     }
+
+    /*
+       흔들기 대화 중에는
+       가만히 있기 대화를 실행하지 않는다.
+    */
+
+    if (
+        dialogueMode === "shake"
+    ) {
+
+        return;
+
+    }
+
+    dialogueMode = "idle";
+
+    if (
+        idleCount >= idleDialogues.length
+    ) {
+
+        idleCount =
+            idleDialogues.length - 1;
+
+    }
+
+    idleDialogueIndex = 0;
+
+    showIdleDialogue();
+
+}
+
+
+/* =================================================
+   가만히 있기 대사 표시
+   ================================================= */
+
+function showIdleDialogue() {
 
     var lines =
         idleDialogues[idleCount];
@@ -576,15 +644,21 @@ function showIdleDialogue() {
 
     }
 
-    idleDialogueIndex =
-        0;
+    var dialogue =
+        lines[idleDialogueIndex];
+
+    if (!dialogue) {
+
+        return;
+
+    }
 
     messageElement.textContent =
-        lines[idleDialogueIndex].text;
+        dialogue.text;
 
     characterImage.src =
         "images/" +
-        lines[idleDialogueIndex].emotion +
+        dialogue.emotion +
         ".png";
 
 }
@@ -616,13 +690,7 @@ function nextIdleDialogue() {
 
     idleDialogueIndex++;
 
-    messageElement.textContent =
-        lines[idleDialogueIndex].text;
-
-    characterImage.src =
-        "images/" +
-        lines[idleDialogueIndex].emotion +
-        ".png";
+    showIdleDialogue();
 
 }
 
@@ -633,9 +701,13 @@ function nextIdleDialogue() {
 
 function resetIdleTimer() {
 
-    if (idleTimer) {
+    stopIdleDialogue();
 
-        clearTimeout(idleTimer);
+    if (
+        steps >= 10000
+    ) {
+
+        return;
 
     }
 
@@ -643,43 +715,7 @@ function resetIdleTimer() {
         setTimeout(
             function() {
 
-                if (
-                    steps >= 10000
-                ) {
-
-                    return;
-
-                }
-
-                if (
-                    idleCount >=
-                    idleDialogues.length
-                ) {
-
-                    idleCount =
-                        idleDialogues.length - 1;
-
-                }
-
-                showIdleDialogue();
-
-                if (
-                    idleCount === 2
-                ) {
-
-                    if (
-                        navigator.vibrate
-                    ) {
-
-                        navigator.vibrate(
-                            [300, 150, 300]
-                        );
-
-                    }
-
-                }
-
-                idleCount++;
+                startIdleDialogue();
 
             },
             30000
@@ -689,13 +725,203 @@ function resetIdleTimer() {
 
 
 /* =================================================
-   실제 걸음 감지
+   가만히 있기 대사가 끝난 뒤
+   다시 30초 기다리기
    ================================================= */
 
-var lastStepTime = 0;
+function finishIdleDialogue() {
 
-var stepThreshold = 12;
+    if (
+        idleCount <
+        idleDialogues.length - 1
+    ) {
 
+        idleCount++;
+
+    }
+
+    idleDialogueIndex = 0;
+
+    dialogueMode = "normal";
+
+    resetIdleTimer();
+
+}
+
+
+/* =================================================
+   휴대폰 흔들기 대화 멈추기
+   ================================================= */
+
+function stopShakeDialogue() {
+
+    if (shakeTimeout1) {
+
+        clearTimeout(shakeTimeout1);
+
+        shakeTimeout1 = null;
+
+    }
+
+    if (shakeTimeout2) {
+
+        clearTimeout(shakeTimeout2);
+
+        shakeTimeout2 = null;
+
+    }
+
+}
+
+
+/* =================================================
+   휴대폰 흔들기
+   ================================================= */
+
+function startShakeDialogue() {
+
+    if (
+        steps >= 10000
+    ) {
+
+        return;
+
+    }
+
+    /*
+       기존 가만히 있기 타이머를 완전히 취소한다.
+    */
+
+    stopIdleDialogue();
+
+    stopShakeDialogue();
+
+    dialogueMode = "shake";
+
+    shakeDialogueIndex = 0;
+
+    messageElement.textContent =
+        shakeDialogues[0].text;
+
+    characterImage.src =
+        "images/" +
+        shakeDialogues[0].emotion +
+        ".png";
+
+
+    if (
+        navigator.vibrate
+    ) {
+
+        navigator.vibrate(100);
+
+    }
+
+
+    /*
+       첫 번째 대사 후
+       두 번째 대사
+    */
+
+    shakeTimeout1 =
+        setTimeout(
+            function() {
+
+                if (
+                    dialogueMode !== "shake"
+                ) {
+
+                    return;
+
+                }
+
+                shakeDialogueIndex = 1;
+
+                messageElement.textContent =
+                    shakeDialogues[1].text;
+
+                characterImage.src =
+                    "images/" +
+                    shakeDialogues[1].emotion +
+                    ".png";
+
+            },
+            1500
+        );
+
+
+    /*
+       두 번째 대사 후
+       세 번째 대사
+    */
+
+    shakeTimeout2 =
+        setTimeout(
+            function() {
+
+                if (
+                    dialogueMode !== "shake"
+                ) {
+
+                    return;
+
+                }
+
+                shakeDialogueIndex = 2;
+
+                messageElement.textContent =
+                    shakeDialogues[2].text;
+
+                characterImage.src =
+                    "images/" +
+                    shakeDialogues[2].emotion +
+                    ".png";
+
+
+                if (
+                    navigator.vibrate
+                ) {
+
+                    navigator.vibrate(200);
+
+                }
+
+
+                /*
+                   흔들기 대사가 끝난 뒤에는
+                   다시 30초 대기한다.
+                */
+
+                setTimeout(
+                    function() {
+
+                        if (
+                            dialogueMode === "shake"
+                        ) {
+
+                            dialogueMode =
+                                "normal";
+
+                            idleCount = 0;
+
+                            resetIdleTimer();
+
+                        }
+
+                    },
+                    1500
+                );
+
+            },
+            3000
+        );
+
+}
+
+
+/* =================================================
+   걸음 센서
+   ================================================= */
 
 function detectStep(event) {
 
@@ -728,6 +954,24 @@ function detectStep(event) {
         new Date().getTime();
 
 
+    /*
+       흔들기 직후에는
+       걸음으로 중복 판정하지 않는다.
+    */
+
+    if (
+        now - lastShakeTime < 1200
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       일반 걸음 판정
+    */
+
     if (
         magnitude > stepThreshold &&
         now - lastStepTime > 400
@@ -754,9 +998,6 @@ function detectStep(event) {
 /* =================================================
    휴대폰 흔들기 감지
    ================================================= */
-
-var lastShakeTime = 0;
-
 
 function detectShake(event) {
 
@@ -789,78 +1030,50 @@ function detectShake(event) {
         new Date().getTime();
 
 
+    /*
+       너무 자주 발동하지 않게 한다.
+    */
+
     if (
-        magnitude > 20 &&
-        now - lastShakeTime > 5000 &&
-        steps < 10000
+        now - lastShakeTime < 5000
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       걷거나 뛰는 중에는
+       흔들기로 판정하지 않는다.
+
+       마지막 걸음으로부터
+       어느 정도 시간이 지난 뒤
+       큰 움직임이 생겼을 때만 흔들기.
+    */
+
+    if (
+        now - lastStepTime < 1200
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       일반적인 걸음보다
+       확실히 큰 움직임만 흔들기로 판정.
+    */
+
+    if (
+        magnitude > 22
     ) {
 
         lastShakeTime =
             now;
 
-        messageElement.textContent =
-            "... 너 뭐하냐?";
-
-        characterImage.src =
-            "images/4.png";
-
-
-        if (
-            navigator.vibrate
-        ) {
-
-            navigator.vibrate(100);
-
-        }
-
-
-        setTimeout(
-            function() {
-
-                if (
-                    steps < 10000
-                ) {
-
-                    messageElement.textContent =
-                        "지금 안 걷고 있지? 어?";
-
-                    characterImage.src =
-                        "images/1.png";
-
-                }
-
-            },
-            1500
-        );
-
-
-        setTimeout(
-            function() {
-
-                if (
-                    steps < 10000
-                ) {
-
-                    messageElement.textContent =
-                        "잔머리 쓰지 말고 똑바로 걸으라고!";
-
-                    characterImage.src =
-                        "images/4.png";
-
-
-                    if (
-                        navigator.vibrate
-                    ) {
-
-                        navigator.vibrate(200);
-
-                    }
-
-                }
-
-            },
-            3000
-        );
+        startShakeDialogue();
 
     }
 
@@ -943,75 +1156,79 @@ if (
 
 
 /* =================================================
-   걸음이 발생하면 가만히 있기 타이머 초기화
+   화면 클릭
    ================================================= */
 
-var originalAddSteps =
-    addSteps;
+function handleDialogueClick() {
+
+    /*
+       가만히 있기 대사
+    */
+
+    if (
+        dialogueMode === "idle"
+    ) {
+
+        var idleLines =
+            idleDialogues[idleCount];
+
+        if (!idleLines) {
+
+            return;
+
+        }
+
+        if (
+            idleDialogueIndex <
+            idleLines.length - 1
+        ) {
+
+            nextIdleDialogue();
+
+        } else {
+
+            finishIdleDialogue();
+
+        }
+
+        return;
+
+    }
 
 
-addSteps =
-    function(amount) {
+    /*
+       흔들기 대사는
+       자동으로 넘어가므로 클릭하지 않는다.
+    */
 
-        originalAddSteps(amount);
+    if (
+        dialogueMode === "shake"
+    ) {
 
-        idleCount = 0;
+        return;
 
-        idleDialogueIndex = 0;
-
-        resetIdleTimer();
-
-    };
+    }
 
 
-/* =================================================
-   가만히 있기 대사 클릭 처리
-   ================================================= */
+    /*
+       일반 걸음수 대사
+    */
+
+    nextNormalDialogue();
+
+}
+
 
 document
     .getElementById("dialogueBox")
-    .addEventListener(
-        "click",
-        function() {
-
-            var lines =
-                idleDialogues[idleCount];
-
-            if (
-                lines &&
-                idleDialogueIndex <
-                lines.length - 1
-            ) {
-
-                nextIdleDialogue();
-
-            }
-
-        }
-    );
+    .onclick =
+    handleDialogueClick;
 
 
 document
     .getElementById("characterArea")
-    .addEventListener(
-        "click",
-        function() {
-
-            var lines =
-                idleDialogues[idleCount];
-
-            if (
-                lines &&
-                idleDialogueIndex <
-                lines.length - 1
-            ) {
-
-                nextIdleDialogue();
-
-            }
-
-        }
-    );
+    .onclick =
+    handleDialogueClick;
 
 
 /* =================================================
