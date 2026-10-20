@@ -481,44 +481,78 @@ updateStepDisplay();
 
 startDialogue(0);
 /* =================================================
-   센서 테스트
+   실제 걸음 감지
    ================================================= */
 
-var sensorMessage =
-    document.createElement("div");
+var lastStepTime = 0;
+var stepThreshold = 12;
 
-sensorMessage.style.position = "fixed";
-sensorMessage.style.left = "10px";
-sensorMessage.style.top = "10px";
-sensorMessage.style.zIndex = "9999";
-sensorMessage.style.padding = "10px";
-sensorMessage.style.background = "white";
-sensorMessage.style.color = "black";
-sensorMessage.style.fontSize = "14px";
+function detectStep(event) {
 
-sensorMessage.textContent =
-    "센서 확인 중...";
+    var acceleration =
+        event.accelerationIncludingGravity;
 
-document.body.appendChild(
-    sensorMessage
-);
+    if (!acceleration) {
+        return;
+    }
 
+    var x = acceleration.x || 0;
+    var y = acceleration.y || 0;
+    var z = acceleration.z || 0;
 
-function testMotion(event) {
+    var magnitude =
+        Math.sqrt(
+            x * x +
+            y * y +
+            z * z
+        );
 
-    sensorMessage.textContent =
-        "센서 작동함!";
+    var now =
+        new Date().getTime();
+
+    if (
+        magnitude > stepThreshold &&
+        now - lastStepTime > 400
+    ) {
+
+        lastStepTime = now;
+
+        addSteps(1);
+
+        if (
+            navigator.vibrate
+        ) {
+
+            navigator.vibrate(40);
+
+        }
+
+    }
 
 }
 
 
+/* =================================================
+   센서 시작
+   ================================================= */
+
+function startMotionSensor() {
+
+    window.addEventListener(
+        "devicemotion",
+        detectStep
+    );
+
+}
+
+
+/* =================================================
+   센서 권한
+   ================================================= */
+
 if (
     typeof DeviceMotionEvent !== "undefined"
 ) {
-
-    sensorMessage.textContent =
-        "Motion API 발견. 권한 확인 중...";
-
 
     if (
         typeof DeviceMotionEvent.requestPermission === "function"
@@ -526,7 +560,7 @@ if (
 
         document.body.addEventListener(
             "click",
-            function askMotionPermission() {
+            function motionPermission() {
 
                 DeviceMotionEvent
                     .requestPermission()
@@ -537,18 +571,7 @@ if (
                                 permission === "granted"
                             ) {
 
-                                sensorMessage.textContent =
-                                    "권한 허용됨. 폰을 움직여봐!";
-
-                                window.addEventListener(
-                                    "devicemotion",
-                                    testMotion
-                                );
-
-                            } else {
-
-                                sensorMessage.textContent =
-                                    "센서 권한이 거부됨.";
+                                startMotionSensor();
 
                             }
 
@@ -557,30 +580,23 @@ if (
                     .catch(
                         function(error) {
 
-                            sensorMessage.textContent =
-                                "센서 권한 오류";
+                            console.log(error);
 
                         }
                     );
+
+                document.body.removeEventListener(
+                    "click",
+                    motionPermission
+                );
 
             }
         );
 
     } else {
 
-        sensorMessage.textContent =
-            "센서 발견. 폰을 움직여봐!";
-
-        window.addEventListener(
-            "devicemotion",
-            testMotion
-        );
+        startMotionSensor();
 
     }
-
-} else {
-
-    sensorMessage.textContent =
-        "이 브라우저는 Motion 센서를 지원하지 않음.";
 
 }
