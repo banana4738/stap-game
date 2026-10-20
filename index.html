@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=no"
+    >
+
+    <title>감독생 만보기</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+
+            margin: 0;
+            padding: 0;
+
+            width: 100%;
+            height: 100%;
+
+            overflow: hidden;
+
+        }
+
+        body {
+
+            background: #222;
+
+            font-family:
+                Arial,
+                "Noto Sans KR",
+                sans-serif;
+
+        }
+
+
+        /* 게임 화면 */
+
+        .game {
+
+            position: relative;
+
+            width: 100%;
+            max-width: 500px;
+
+            height: 100vh;
+            height: 100dvh;
+
+            margin: 0 auto;
+
+            background: #efa0c7;
+
+            overflow: hidden;
+
+        }
+
+
+        /* 걸음 수 */
+
+        .steps {
+
+            position: absolute;
+
+            top: 20px;
+            left: 20px;
+
+            z-index: 30;
+
+            padding: 8px 15px;
+
+            background:
+                rgba(0, 0, 0, 0.55);
+
+            border-radius: 20px;
+
+            color: white;
+
+            font-size: 22px;
+
+            font-weight: bold;
+
+            pointer-events: none;
+
+        }
+
+
+        /* 캐릭터 */
+
+        .character {
+
+            position: absolute;
+
+            top: 0;
+            left: 0;
+
+            width: 100%;
+            height: 78%;
+
+            display: flex;
+
+            justify-content: center;
+            align-items: flex-start;
+
+            z-index: 5;
+
+            overflow: hidden;
+
+            touch-action: manipulation;
+
+        }
+
+
+        .character img {
+
+            width: 125%;
+
+            height: auto;
+
+            max-width: none;
+
+            display: block;
+
+            transform:
+                translate(-12px, -40px);
+
+            user-select: none;
+
+            -webkit-user-select: none;
+
+            pointer-events: none;
+
+        }
+
+
+        /* 대화창 */
+
+        .dialogue-box {
+
+            position: absolute;
+
+            left: 5%;
+
+            bottom: 45px;
+
+            width: 90%;
+
+            min-height: 170px;
+
+            padding: 25px;
+
+            background:
+                rgba(255, 255, 255, 0.97);
+
+            border:
+                3px solid #333;
+
+            border-radius: 12px;
+
+            box-shadow:
+                0 5px 15px
+                rgba(0, 0, 0, 0.25);
+
+            z-index: 20;
+
+            touch-action: manipulation;
+
+            cursor: pointer;
+
+        }
+
+
+        /* 이름 */
+
+        .name {
+
+            position: absolute;
+
+            top: -18px;
+            left: 20px;
+
+            padding: 5px 18px;
+
+            background: #333;
+
+            color: white;
+
+            border-radius: 15px;
+
+            font-size: 17px;
+
+            font-weight: bold;
+
+            pointer-events: none;
+
+        }
+
+
+        /* 대사 */
+
+        .message {
+
+            color: #222;
+
+            font-size: 18px;
+
+            line-height: 1.7;
+
+            word-break: keep-all;
+
+            pointer-events: none;
+
+        }
+
+
+        /* 다음 표시 */
+
+        .next {
+
+            position: absolute;
+
+            right: 18px;
+            bottom: 10px;
+
+            color: #777;
+
+            font-size: 14px;
+
+            pointer-events: none;
+
+        }
+
+
+        /* 테스트 버튼 */
+
+        .test-panel {
+
+            position: absolute;
+
+            left: 10px;
+            right: 10px;
+
+            bottom: 5px;
+
+            z-index: 100;
+
+            display: flex;
+
+            flex-wrap: wrap;
+
+            gap: 5px;
+
+            justify-content: center;
+
+        }
+
+
+        .test-panel button {
+
+            border: none;
+
+            padding: 6px 9px;
+
+            border-radius: 8px;
+
+            background: #333;
+
+            color: white;
+
+            font-size: 12px;
+
+            cursor: pointer;
+
+            touch-action: manipulation;
+
+        }
+
+
+        .test-panel button:active {
+
+            transform: scale(0.95);
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="game">
+
+
+    <!-- 걸음 수 -->
+
+    <div
+        class="steps"
+        id="steps"
+    >
+        0보
+    </div>
+
+
+    <!-- 캐릭터 -->
+
+    <div
+        class="character"
+        id="characterArea"
+    >
+
+        <img
+            id="characterImage"
+            src="images/5.png"
+            alt="에이스"
+        >
+
+    </div>
+
+
+    <!-- 대화창 -->
+
+    <div
+        class="dialogue-box"
+        id="dialogueBox"
+    >
+
+        <div class="name">
+            에이스
+        </div>
+
+
+        <div
+            class="message"
+            id="message"
+        >
+            너 말이야, 마법도 못 쓰면서 체력까지 없으면 어쩌려고 그래?
+        </div>
+
+
+        <div class="next">
+            화면을 눌러 다음
+        </div>
+
+    </div>
+
+
+    <!-- 테스트 버튼 -->
+
+    <div class="test-panel">
+
+
+        <button onclick="addSteps(10)">
+            +10
+        </button>
+
+
+        <button onclick="addSteps(50)">
+            +50
+        </button>
+
+
+        <button onclick="addSteps(100)">
+            +100
+        </button>
+
+
+        <button onclick="addSteps(500)">
+            +500
+        </button>
+
+
+        <button onclick="addSteps(1000)">
+            +1000
+        </button>
+
+
+        <button onclick="addSteps(2500)">
+            +2500
+        </button>
+
+
+        <button onclick="addSteps(5000)">
+            +5000
+        </button>
+
+
+        <button onclick="setSteps(10000)">
+            만보
+        </button>
+
+
+        <button onclick="setSteps(0)">
+            초기화
+        </button>
+
+
+    </div>
+
+
+</div>
+
+
+<!-- game.JS 연결 -->
+
+<script src="game.JS"></script>
+
+
+</body>
+
+</html>
