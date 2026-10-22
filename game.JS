@@ -109,7 +109,7 @@ function playDialogueSound() {
         audioContext.currentTime;
 
 
-    /* 첫 번째 음 */
+    /* 첫 번째 띠링 */
 
     var oscillator1 =
         audioContext.createOscillator();
@@ -160,7 +160,7 @@ function playDialogueSound() {
     );
 
 
-    /* 두 번째 음 */
+    /* 두 번째 띠링 */
 
     var oscillator2 =
         audioContext.createOscillator();
@@ -757,13 +757,7 @@ function nextNormalDialogue() {
     }
 
 
-    /*
-       마지막 대사가 끝났으면
-       기본 표정 5번으로 복구
-    */
-
     resetCharacterEmotion();
-
 
     resetIdleTimer();
 
@@ -877,9 +871,7 @@ function nextIdleDialogue() {
 
         idleIndex++;
 
-
         showIdleDialogue();
-
 
         return;
 
@@ -964,10 +956,6 @@ function resetIdleTimer() {
 
 function startShakeDialogue() {
 
-    /*
-       다른 이벤트가 진행 중이면 금지
-    */
-
     if (
         dialogueMode !== "normal"
     ) {
@@ -977,13 +965,14 @@ function startShakeDialogue() {
     }
 
 
-    /*
-       일반 대사가 아직 남아있으면 금지
-    */
-
     var lines =
         dialogues[currentStep];
 
+
+    /*
+       일반 대사가 끝나지 않았다면
+       흔들기 이벤트를 발생시키지 않음
+    */
 
     if (
         lines &&
@@ -1068,9 +1057,7 @@ function nextShakeDialogue() {
 
         shakeDialogueIndex++;
 
-
         showShakeDialogue();
-
 
         return;
 
@@ -1119,11 +1106,6 @@ function addSteps(amount) {
     updateStepDisplay();
 
 
-    /*
-       idle 대화 중 걸으면
-       idle 대화 종료
-    */
-
     if (
         dialogueMode === "idle"
     ) {
@@ -1153,10 +1135,6 @@ function addSteps(amount) {
     var newMilestone =
         getCurrentMilestone();
 
-
-    /*
-       새로운 마일스톤 도달
-    */
 
     if (
         newMilestone !== oldMilestone
@@ -1228,8 +1206,7 @@ function detectStep(event) {
 
 
     /*
-       일정 크기 이상의 움직임을
-       걸음으로 계산
+       걸음 판정
     */
 
     if (
@@ -1254,66 +1231,77 @@ function detectStep(event) {
 
 
 /*
-   이전 움직임 크기
+   핵심 변경점
+
+   이전에는 큰 움직임 4번이면 발동했지만
+   이제는 "큰 움직임 10번"이 누적되어야 한다.
+*/
+
+var shakeCount = 0;
+
+
+/*
+   마지막으로 감지한 큰 움직임
 */
 
 var shakeLastMagnitude = null;
 
 
 /*
-   짧은 시간 안에 발생한
-   큰 움직임 기록
+   마지막 흔들기 기록 시간
 */
 
-var shakeChanges = [];
+var shakeLastTime = 0;
 
 
 /*
-   흔들기 패턴 시작 시간
+   흔들기 감지 기준
+
+   숫자가 클수록 더 크게 흔들어야 함.
+*/
+
+var shakeThreshold = 4.5;
+
+
+/*
+   흔들기 횟수
+
+   10번
+*/
+
+var shakeRequiredCount = 10;
+
+
+/*
+   흔들기 사이의 최소 시간
+
+   너무 빠른 센서 노이즈를 방지
+*/
+
+var shakeMinInterval = 80;
+
+
+/*
+   흔들기 카운트를 유지할 최대 시간
+
+   3초 안에 10번 흔들어야 함
+*/
+
+var shakeCountWindow = 3000;
+
+
+/*
+   흔들기 시작 시간
 */
 
 var shakeStartTime = 0;
 
 
 /*
-   흔들기 판정 시간
-
-   1.2초 안에 여러 번 움직여야 함
+   흔들기 발동 후 대기 시간
 */
 
-var shakeWindow = 1200;
-
-
-/*
-   센서값 변화량 기준
-
-   너무 작은 움직임은 무시
-*/
-
-var shakeThreshold = 2.8;
-
-
-/*
-   필요한 움직임 횟수
-
-   4번
-*/
-
-var shakeRequiredCount = 4;
-
-
-/*
-   흔들기 후 쿨다운
-*/
-
-var shakeCooldown = 3000;
-
-
-/*
-   마지막 흔들기 시간
-*/
-
-var lastShakeTime = 0;
+var shakeCooldown = 4000;
 
 
 /* =================================================
@@ -1334,29 +1322,15 @@ function detectShake(event) {
 
 
     /*
-       흔들기 대화 중에는
-       다시 발동하지 않음
+       다른 특별 대화 중이면
+       흔들기 감지하지 않음
     */
 
     if (
-        dialogueMode === "shake"
+        dialogueMode !== "normal"
     ) {
 
-        return;
-
-    }
-
-
-    /*
-       idle 대화 중에도
-       흔들기 발동 금지
-    */
-
-    if (
-        dialogueMode === "idle"
-    ) {
-
-        shakeChanges = [];
+        shakeCount = 0;
 
         shakeStartTime = 0;
 
@@ -1368,8 +1342,8 @@ function detectShake(event) {
 
 
     /*
-       일반 대사가 아직 진행 중이면
-       흔들기 발동 금지
+       일반 대사가 아직 남아있으면
+       흔들기 감지하지 않음
     */
 
     var lines =
@@ -1377,13 +1351,12 @@ function detectShake(event) {
 
 
     if (
-        dialogueMode === "normal" &&
         lines &&
         currentDialogueIndex <
         lines.length - 1
     ) {
 
-        shakeChanges = [];
+        shakeCount = 0;
 
         shakeStartTime = 0;
 
@@ -1405,7 +1378,7 @@ function detectShake(event) {
 
 
     /*
-       움직임 크기 계산
+       현재 움직임 크기
     */
 
     var magnitude =
@@ -1417,7 +1390,7 @@ function detectShake(event) {
 
 
     /*
-       첫 센서값 저장
+       최초 값 저장
     */
 
     if (
@@ -1433,7 +1406,7 @@ function detectShake(event) {
 
 
     /*
-       이전 값과 현재 값의 차이
+       이전 센서값과의 차이
     */
 
     var change =
@@ -1448,7 +1421,7 @@ function detectShake(event) {
 
 
     /*
-       작은 움직임은 무시
+       큰 움직임이 아니면 무시
     */
 
     if (
@@ -1480,7 +1453,26 @@ function detectShake(event) {
 
 
     /*
-       첫 번째 큰 움직임
+       너무 짧은 시간 안에 들어온
+       센서 변화는 하나로 취급
+    */
+
+    if (
+        now - shakeLastTime <
+        shakeMinInterval
+    ) {
+
+        return;
+
+    }
+
+
+    shakeLastTime =
+        now;
+
+
+    /*
+       첫 흔들기
     */
 
     if (
@@ -1490,44 +1482,44 @@ function detectShake(event) {
         shakeStartTime =
             now;
 
-        shakeChanges = [];
+        shakeCount =
+            0;
 
     }
 
 
     /*
-       1.2초가 넘으면
-       새로운 흔들기로 다시 시작
+       3초가 지나면
+       흔들기 횟수를 다시 셈
     */
 
     if (
         now - shakeStartTime >
-        shakeWindow
+        shakeCountWindow
     ) {
 
         shakeStartTime =
             now;
 
-        shakeChanges = [];
+        shakeCount =
+            0;
 
     }
 
 
     /*
-       큰 움직임 기록
+       큰 움직임 1회 추가
     */
 
-    shakeChanges.push(
-        now
-    );
+    shakeCount++;
 
 
     /*
-       4번 이상이면 발동
+       10번 모이면 발동
     */
 
     if (
-        shakeChanges.length >=
+        shakeCount >=
         shakeRequiredCount
     ) {
 
@@ -1535,7 +1527,8 @@ function detectShake(event) {
             now;
 
 
-        shakeChanges = [];
+        shakeCount =
+            0;
 
 
         shakeStartTime =
@@ -1602,7 +1595,6 @@ if (
                     .then(
                         function(permission) {
 
-
                             if (
                                 permission ===
                                 "granted"
@@ -1661,16 +1653,8 @@ if (
 
 function handleDialogueClick() {
 
-    /*
-       오디오 활성화
-    */
-
     unlockAudio();
 
-
-    /*
-       흔들기 대사
-    */
 
     if (
         dialogueMode === "shake"
@@ -1683,10 +1667,6 @@ function handleDialogueClick() {
     }
 
 
-    /*
-       idle 대사
-    */
-
     if (
         dialogueMode === "idle"
     ) {
@@ -1697,10 +1677,6 @@ function handleDialogueClick() {
 
     }
 
-
-    /*
-       일반 대사
-    */
 
     if (
         dialogueMode === "normal"
