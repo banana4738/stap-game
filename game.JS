@@ -39,11 +39,6 @@ var defaultEmotion = 5;
 var audioContext = null;
 
 
-/*
-   처음 화면을 누르면
-   브라우저의 오디오 기능을 활성화
-*/
-
 function unlockAudio() {
 
     if (
@@ -78,10 +73,6 @@ function unlockAudio() {
 }
 
 
-/*
-   띠링띠링 소리
-*/
-
 function playDialogueSound() {
 
     if (
@@ -106,10 +97,6 @@ function playDialogueSound() {
     var now =
         audioContext.currentTime;
 
-
-    /*
-       첫 번째 음
-    */
 
     var oscillator1 =
         audioContext.createOscillator();
@@ -156,10 +143,6 @@ function playDialogueSound() {
         now + 0.14
     );
 
-
-    /*
-       두 번째 음
-    */
 
     var oscillator2 =
         audioContext.createOscillator();
@@ -637,10 +620,6 @@ function nextNormalDialogue() {
     }
 
 
-    /*
-       대화가 완전히 끝남
-    */
-
     resetCharacterEmotion();
 
     resetIdleTimer();
@@ -823,13 +802,26 @@ function resetIdleTimer() {
 
 function startShakeDialogue() {
 
-    /*
-       현재 진행 중인 대사가 있다면
-       흔들기 대사를 시작하지 않음
-    */
-
     if (
         dialogueMode !== "normal"
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       일반 대화가 완전히 끝났는지 확인
+    */
+
+    var lines =
+        dialogues[currentStep];
+
+    if (
+        lines &&
+        currentDialogueIndex <
+        lines.length - 1
     ) {
 
         return;
@@ -943,11 +935,6 @@ function addSteps(amount) {
     updateStepDisplay();
 
 
-    /*
-       idle 대화 중 걷기 시작하면
-       idle 대화를 종료
-    */
-
     if (
         dialogueMode === "idle"
     ) {
@@ -963,11 +950,6 @@ function addSteps(amount) {
     }
 
 
-    /*
-       흔들기 대화 중이 아니라면
-       idle 타이머 재시작
-    */
-
     if (
         dialogueMode !== "shake"
     ) {
@@ -980,10 +962,6 @@ function addSteps(amount) {
     var newMilestone =
         getCurrentMilestone();
 
-
-    /*
-       새로운 마일스톤
-    */
 
     if (
         newMilestone !== oldMilestone
@@ -1015,6 +993,7 @@ function detectStep(event) {
 
     }
 
+
     var x =
         acceleration.x || 0;
 
@@ -1024,6 +1003,7 @@ function detectStep(event) {
     var z =
         acceleration.z || 0;
 
+
     var magnitude =
         Math.sqrt(
             x * x +
@@ -1031,9 +1011,15 @@ function detectStep(event) {
             z * z
         );
 
+
     var now =
         new Date().getTime();
 
+
+    /*
+       흔들기 직후에는
+       걸음 판정을 잠시 막음
+    */
 
     if (
         now - lastShakeTime < 1000
@@ -1060,50 +1046,127 @@ function detectStep(event) {
 
 
 /* =================================================
-   흔들기 감지
+   걷기 패턴 분석
    ================================================= */
 
 
 /*
-   너무 민감하지 않도록 설정
-
-   살짝 움직임       -> 무시
-   걷는 중 움직임    -> 무시
-   어느 정도 크게
-   여러 번 흔들기    -> 발동
+   최근 걸음이 발생한 시간들
 */
 
-var shakeLastMagnitude = null;
-
-var shakeChangeCount = 0;
-
-var shakeStartTime = 0;
+var recentStepTimes = [];
 
 
 /*
-   움직임을 모으는 시간
+   걷고 있다고 판단할 시간
 */
 
-var shakeWindow = 800;
+var walkingTimeout = 1800;
 
 
 /*
-   이 정도 이상 차이가 나야
-   큰 움직임으로 인정
+   최근 걸음 기록
 */
 
-var shakeChangeThreshold = 3.5;
+function registerStepPattern() {
+
+    var now =
+        new Date().getTime();
+
+
+    recentStepTimes.push(
+        now
+    );
+
+
+    /*
+       너무 오래된 기록 제거
+    */
+
+    recentStepTimes =
+        recentStepTimes.filter(
+            function(time) {
+
+                return (
+                    now - time <= 2500
+                );
+
+            }
+        );
+
+}
 
 
 /*
-   3번 이상 큰 변화가 있어야 발동
+   현재 걷는 중인지 확인
 */
 
-var shakeRequiredChanges = 3;
+function isWalking() {
+
+    var now =
+        new Date().getTime();
+
+
+    recentStepTimes =
+        recentStepTimes.filter(
+            function(time) {
+
+                return (
+                    now - time <=
+                    walkingTimeout
+                );
+
+            }
+        );
+
+
+    /*
+       최근 1.8초 안에
+       걸음이 2번 이상 있으면
+       걷는 중으로 판단
+    */
+
+    return (
+        recentStepTimes.length >= 2
+    );
+
+}
+
+
+/* =================================================
+   흔들기 패턴
+   ================================================= */
 
 
 /*
-   흔들기 감지
+   최근 움직임의 변화량을 저장
+*/
+
+var movementChanges = [];
+
+
+/*
+   흔들기 분석 시작 시간
+*/
+
+var shakePatternStart = 0;
+
+
+/*
+   흔들기 기준
+
+   기존보다 훨씬 보수적으로 잡음.
+*/
+
+var shakePatternWindow = 1000;
+
+var shakeMovementThreshold = 5.0;
+
+var shakeRequiredMovements = 4;
+
+
+/*
+   흔들기 분석
 */
 
 function detectShake(event) {
@@ -1117,6 +1180,63 @@ function detectShake(event) {
 
     }
 
+
+    /*
+       대화가 진행 중이면
+       센서값 자체를 무시
+    */
+
+    if (
+        dialogueMode !== "normal"
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       현재 일반 대사가 아직 끝나지 않았으면
+       흔들기 판정을 하지 않음
+    */
+
+    var lines =
+        dialogues[currentStep];
+
+
+    if (
+        lines &&
+        currentDialogueIndex <
+        lines.length - 1
+    ) {
+
+        movementChanges = [];
+
+        shakePatternStart = 0;
+
+        return;
+
+    }
+
+
+    /*
+       걷는 중이면
+       흔들기로 판정하지 않음
+    */
+
+    if (
+        isWalking()
+    ) {
+
+        movementChanges = [];
+
+        shakePatternStart = 0;
+
+        return;
+
+    }
+
+
     var x =
         acceleration.x || 0;
 
@@ -1126,6 +1246,7 @@ function detectShake(event) {
     var z =
         acceleration.z || 0;
 
+
     var magnitude =
         Math.sqrt(
             x * x +
@@ -1133,83 +1254,16 @@ function detectShake(event) {
             z * z
         );
 
-    var now =
-        new Date().getTime();
-
 
     /*
-       흔들기 대사 중에는
-       다시 발동하지 않음
+       이전 센서값
     */
 
     if (
-        dialogueMode === "shake"
+        detectShake.lastMagnitude === undefined
     ) {
 
-        return;
-
-    }
-
-
-    /*
-       idle / 일반 대화가 진행 중이면
-       흔들기 이벤트를 막음
-
-       일반 대화도 마지막 대사까지
-       아직 진행 중이면 막는다.
-    */
-
-    if (
-        dialogueMode === "idle"
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        dialogueMode === "normal"
-    ) {
-
-        var lines =
-            dialogues[currentStep];
-
-        if (
-            lines &&
-            currentDialogueIndex <
-            lines.length - 1
-        ) {
-
-            return;
-
-        }
-
-    }
-
-
-    /*
-       흔들기 직후 쿨다운
-    */
-
-    if (
-        now - lastShakeTime < 3000
-    ) {
-
-        return;
-
-    }
-
-
-    /*
-       첫 센서값
-    */
-
-    if (
-        shakeLastMagnitude === null
-    ) {
-
-        shakeLastMagnitude =
+        detectShake.lastMagnitude =
             magnitude;
 
         return;
@@ -1217,28 +1271,24 @@ function detectShake(event) {
     }
 
 
-    /*
-       이전 값과 현재 값의 차이
-    */
-
     var change =
         Math.abs(
             magnitude -
-            shakeLastMagnitude
+            detectShake.lastMagnitude
         );
 
 
-    shakeLastMagnitude =
+    detectShake.lastMagnitude =
         magnitude;
 
 
     /*
-       작은 변화는 무시
+       작은 움직임은 완전히 무시
     */
 
     if (
         change <
-        shakeChangeThreshold
+        shakeMovementThreshold
     ) {
 
         return;
@@ -1246,90 +1296,91 @@ function detectShake(event) {
     }
 
 
-    /*
-       첫 번째 큰 움직임
-    */
-
-    if (
-        shakeChangeCount === 0
-    ) {
-
-        shakeStartTime =
-            now;
-
-    }
-
-
-    shakeChangeCount++;
+    var now =
+        new Date().getTime();
 
 
     /*
-       짧은 시간에
-       3번 이상 큰 움직임
+       첫 움직임
     */
 
     if (
-        shakeChangeCount >=
-        shakeRequiredChanges
+        shakePatternStart === 0
     ) {
 
-        if (
-            now - shakeStartTime <=
-            shakeWindow
-        ) {
-
-            lastShakeTime =
-                now;
-
-            shakeChangeCount =
-                0;
-
-            shakeStartTime =
-                0;
-
-            shakeLastMagnitude =
-                null;
-
-            startShakeDialogue();
-
-            return;
-
-        }
-
-
-        /*
-           너무 느리게 흔들었으면
-           다시 시작
-        */
-
-        shakeChangeCount =
-            0;
-
-        shakeStartTime =
+        shakePatternStart =
             now;
+
+        movementChanges = [];
 
     }
 
 
     /*
-       너무 오래 걸리면 초기화
+       너무 오래 끌었으면
+       새로운 흔들기로 시작
     */
 
     if (
-        shakeChangeCount > 0 &&
-        now - shakeStartTime >
-        shakeWindow
+        now - shakePatternStart >
+        shakePatternWindow
     ) {
 
-        shakeChangeCount =
-            0;
+        shakePatternStart =
+            now;
 
-        shakeStartTime =
-            0;
+        movementChanges = [];
+
+    }
+
+
+    movementChanges.push(
+        now
+    );
+
+
+    /*
+       충분히 빠르게
+       여러 번 움직였을 때만 발동
+    */
+
+    if (
+        movementChanges.length >=
+        shakeRequiredMovements
+    ) {
+
+        lastShakeTime =
+            now;
+
+        movementChanges = [];
+
+        shakePatternStart = 0;
+
+        detectShake.lastMagnitude =
+            undefined;
+
+        startShakeDialogue();
 
     }
 
 }
+
+
+/* =================================================
+   걸음 감지에 패턴 기록 추가
+   ================================================= */
+
+var originalAddSteps =
+    addSteps;
+
+addSteps =
+    function(amount) {
+
+        registerStepPattern();
+
+        originalAddSteps(amount);
+
+    };
 
 
 /* =================================================
@@ -1394,6 +1445,7 @@ if (
                         }
                     );
 
+
                 document.body.removeEventListener(
                     "click",
                     motionPermission
@@ -1426,11 +1478,6 @@ if (
    ================================================= */
 
 function handleDialogueClick() {
-
-    /*
-       화면을 한 번 누르면
-       오디오 활성화
-    */
 
     unlockAudio();
 
