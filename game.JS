@@ -26,6 +26,32 @@ var lastShakeTime = 0;
 
 
 /* =================================================
+   기본 표정 / 대사 알림음
+   ================================================= */
+
+var defaultEmotion = 1;
+
+var dialogueSound =
+    new Audio("sounds/notification.mp3");
+
+dialogueSound.preload = "auto";
+
+function playDialogueSound() {
+
+    dialogueSound.currentTime = 0;
+
+    dialogueSound.play().catch(
+        function(error) {
+
+            console.log(error);
+
+        }
+    );
+
+}
+
+
+/* =================================================
    화면 요소
    ================================================= */
 
@@ -394,6 +420,8 @@ function showNormalDialogue() {
         dialogue.emotion +
         ".png";
 
+    playDialogueSound();
+
 }
 
 
@@ -429,7 +457,25 @@ function nextNormalDialogue() {
 
         showNormalDialogue();
 
+        return;
+
     }
+
+
+    /*
+       일반 대화가 끝나면
+       기본 표정으로 복구
+    */
+
+    dialogueMode =
+        "normal";
+
+    characterImage.src =
+        "images/" +
+        defaultEmotion +
+        ".png";
+
+    resetIdleTimer();
 
 }
 
@@ -493,6 +539,8 @@ function showIdleDialogue() {
         dialogue.emotion +
         ".png";
 
+    playDialogueSound();
+
 }
 
 
@@ -533,10 +581,6 @@ function nextIdleDialogue() {
     }
 
 
-    /*
-       현재 idle 묶음 끝
-    */
-
     dialogueMode =
         "normal";
 
@@ -545,8 +589,15 @@ function nextIdleDialogue() {
 
 
     /*
-       다음 idle 묶음으로 이동
+       idle 대화가 끝나면
+       기본 표정으로 복구
     */
+
+    characterImage.src =
+        "images/" +
+        defaultEmotion +
+        ".png";
+
 
     if (
         idleGroup <
@@ -648,6 +699,8 @@ function showShakeDialogue() {
         dialogue.emotion +
         ".png";
 
+    playDialogueSound();
+
 }
 
 
@@ -679,15 +732,22 @@ function nextShakeDialogue() {
     }
 
 
-    /*
-       흔들기 대사 종료
-    */
-
     dialogueMode =
         "normal";
 
     shakeDialogueIndex =
         0;
+
+
+    /*
+       흔들기 대화가 끝나면
+       기본 표정으로 복구
+    */
+
+    characterImage.src =
+        "images/" +
+        defaultEmotion +
+        ".png";
 
     resetIdleTimer();
 
@@ -806,10 +866,6 @@ function detectStep(event) {
         new Date().getTime();
 
 
-    /*
-       흔들기 직후 중복 걸음 방지
-    */
-
     if (
         now - lastShakeTime < 1000
     ) {
@@ -818,10 +874,6 @@ function detectStep(event) {
 
     }
 
-
-    /*
-       걸음 감지
-    */
 
     if (
         magnitude > 11 &&
@@ -843,16 +895,14 @@ function detectStep(event) {
    ================================================= */
 
 /*
-   이전보다 훨씬 빡센 설정.
+   완화된 설정
 
-   살짝 움직임       -> 무시
-   폰 들기           -> 무시
-   걷다가 흔들림     -> 무시
-   한두 번 흔들기    -> 무시
+   살짝 들기       -> 무시
+   걷다가 움직임   -> 대부분 무시
+   한두 번 흔들기  -> 무시
+   여러 번 빠르게 흔들기 -> 발동
 
-   짧은 시간에
-   강하게 여러 번
-   "다다다다다" 해야 발동
+   기존보다 감지 조건을 완화함.
 */
 
 var shakeLastMagnitude = 0;
@@ -861,11 +911,26 @@ var shakeChangeCount = 0;
 
 var shakeStartTime = 0;
 
-var shakeWindow = 500;
 
-var shakeChangeThreshold = 6.0;
+/*
+   기존 700ms -> 1000ms
+*/
 
-var shakeRequiredChanges = 6;
+var shakeWindow = 1000;
+
+
+/*
+   기존 4.0 -> 2.5
+*/
+
+var shakeChangeThreshold = 2.5;
+
+
+/*
+   기존 4번 -> 3번
+*/
+
+var shakeRequiredChanges = 3;
 
 
 function detectShake(event) {
@@ -915,11 +980,13 @@ function detectShake(event) {
 
     /*
        걷고 난 직후에는
-       흔들기로 오인하지 않음
+       걸음 동작을 흔들기로 오인하지 않음
+
+       기존 1초 -> 0.5초로 완화
     */
 
     if (
-        now - lastStepTime < 1500
+        now - lastStepTime < 500
     ) {
 
         shakeLastMagnitude =
@@ -950,7 +1017,7 @@ function detectShake(event) {
 
 
     /*
-       센서값이 처음 들어온 경우
+       첫 센서값
     */
 
     if (
@@ -966,7 +1033,7 @@ function detectShake(event) {
 
 
     /*
-       이전 센서값과 현재 센서값 차이
+       이전 값과 현재 값의 차이
     */
 
     var change =
@@ -1012,7 +1079,7 @@ function detectShake(event) {
 
     /*
        짧은 시간에
-       6번 이상 큰 변화가 있어야 함
+       3번 이상 큰 변화가 있어야 함
     */
 
     if (
@@ -1058,8 +1125,7 @@ function detectShake(event) {
 
 
     /*
-       너무 오래 걸리면
-       처음부터 다시 셈
+       너무 오래 걸리면 초기화
     */
 
     if (
@@ -1147,6 +1213,7 @@ if (
         );
 
     }
+
     else {
 
         startMotionSensor();
