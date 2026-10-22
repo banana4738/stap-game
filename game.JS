@@ -81,7 +81,7 @@ var dialogueBox =
 
 
 /* =================================================
-   일반 대사
+   기본 대사
    ================================================= */
 
 var dialogues = {
@@ -428,8 +428,6 @@ function playNotificationSound() {
         audioContext.currentTime;
 
 
-    /* 첫 번째 띠링 */
-
     var oscillator1 =
         audioContext.createOscillator();
 
@@ -478,8 +476,6 @@ function playNotificationSound() {
         now + 0.27
     );
 
-
-    /* 두 번째 띠링 */
 
     var oscillator2 =
         audioContext.createOscillator();
@@ -673,11 +669,6 @@ function showNormalDialogue() {
         ".png";
 
 
-    /*
-       기본 대사가 표시될 때도
-       띠링띠링
-    */
-
     playNotificationSound();
 
 }
@@ -832,10 +823,6 @@ function nextIdleDialogue() {
     }
 
 
-    /*
-       현재 이벤트의 다음 대사
-    */
-
     if (
         idleIndex <
         group.length - 1
@@ -847,9 +834,8 @@ function nextIdleDialogue() {
 
 
         /*
-           첫 번째 이벤트의 마지막 대사
-           "곁에 있을테니까."
-           를 보여준 뒤 30초 대기.
+           "곁에 있을테니까."가 나온 뒤
+           30초 동안 기다린다.
         */
 
         if (
@@ -907,11 +893,6 @@ function nextIdleDialogue() {
     }
 
 
-    /*
-       두 번째 이벤트가 끝났다면
-       idle 종료.
-    */
-
     dialogueMode =
         "normal";
 
@@ -956,11 +937,6 @@ function resetIdleTimer() {
     }
 
 
-    /*
-       30초 동안 아무것도 하지 않으면
-       idle 이벤트 시작.
-    */
-
     idleTimer =
         setTimeout(
             function() {
@@ -982,15 +958,10 @@ function resetIdleTimer() {
 
 
 /* =================================================
-   흔들기 이벤트
+   흔들기 이벤트 시작
    ================================================= */
 
 function startShakeDialogue() {
-
-    /*
-       idle 이벤트 중에는
-       흔들기로 끼어들지 않는다.
-    */
 
     if (
         dialogueMode === "idle" ||
@@ -1117,11 +1088,6 @@ function addSteps(amount) {
     updateStepDisplay();
 
 
-    /*
-       idle 또는 idleWait 중 걸음을 걸으면
-       해당 이벤트를 취소한다.
-    */
-
     if (
         dialogueMode === "idle" ||
         dialogueMode === "idleWait"
@@ -1205,9 +1171,12 @@ function detectStep(event) {
         new Date().getTime();
 
 
+    /*
+       너무 빠르게 여러 번 세는 것 방지
+    */
+
     if (
-        now - lastStepTime <
-        350
+        now - lastStepTime < 450
     ) {
 
         return;
@@ -1215,8 +1184,23 @@ function detectStep(event) {
     }
 
 
+    /*
+       중력값 약 9.8을 기준으로
+       실제 움직임을 확인한다.
+    */
+
+    var movement =
+        Math.abs(
+            magnitude - 9.8
+        );
+
+
+    /*
+       기존보다 널널하게 판정
+    */
+
     if (
-        magnitude > 11
+        movement > 1.2
     ) {
 
         lastStepTime =
@@ -1536,11 +1520,6 @@ document.addEventListener(
 
 function handleDialogueClick(event) {
 
-    /*
-       대화창 클릭은
-       걸음 수와 별개로 처리.
-    */
-
     if (
         event
     ) {
@@ -1556,7 +1535,7 @@ function handleDialogueClick(event) {
     /*
        "곁에 있을테니까." 이후
        30초 기다리는 동안에는
-       클릭해도 아무것도 하지 않는다.
+       클릭해도 넘어가지 않는다.
     */
 
     if (
