@@ -48,7 +48,7 @@ var shakeLastTime = 0;
 
 var shakeWindow = 3000;
 
-var shakeChangeThreshold = 4.0;
+var shakeChangeThreshold = 3.2;
 
 var shakeRequiredChanges = 10;
 
@@ -827,9 +827,14 @@ function nextIdleDialogue() {
     }
 
 
+    /*
+       현재 그룹에 다음 대사가 있으면
+       다음 대사로 이동
+    */
+
     if (
-        idleIndex <
-        group.length - 1
+        idleIndex + 1 <
+        group.length
     ) {
 
         idleIndex++;
@@ -838,8 +843,10 @@ function nextIdleDialogue() {
 
 
         /*
-           "곁에 있을테니까."가 나온 뒤
-           30초 동안 기다린다.
+           첫 번째 idle 이벤트의
+           마지막 대사인
+           "곁에 있을테니까." 뒤에서
+           30초 대기
         */
 
         if (
@@ -896,6 +903,11 @@ function nextIdleDialogue() {
 
     }
 
+
+    /*
+       현재 idle 그룹의 마지막 대사까지
+       모두 본 경우
+    */
 
     dialogueMode =
         "normal";
@@ -1200,12 +1212,11 @@ function detectStep(event) {
 
 
     /*
-       현재 사용하기로 한
-       예민한 걸음 판정
+       기존보다 조금 더 예민하게 판정
     */
 
     if (
-        movement > 1.7
+        movement > 1.4
     ) {
 
         lastStepTime =
@@ -1302,7 +1313,7 @@ function detectShake(event) {
 
 
     /*
-       흔들기 이벤트가 끝난 직후
+       흔들기 이벤트 직후
        3초 동안 재발동하지 않음.
     */
 
