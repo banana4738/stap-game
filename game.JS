@@ -1200,7 +1200,7 @@ function detectStep(event) {
     */
 
     if (
-        movement > 1.2
+        movement > 2.2
     ) {
 
         lastStepTime =
