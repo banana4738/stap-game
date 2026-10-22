@@ -12,8 +12,6 @@ var dialogueMode = "normal";
 
 var idleTimer = null;
 
-var idleGroup = 0;
-
 var idleIndex = 0;
 
 var shakeDialogueIndex = 0;
@@ -454,67 +452,60 @@ var milestones = [
 
 
 /* =================================================
-   30초 후 대사
+   30초 후 idle 대사
    ================================================= */
+
+/*
+   이번에는 묶음을 사용하지 않는다.
+   그냥 순서대로 한 줄씩 진행한다.
+
+   1
+   슬슬 일어나...
+
+   2
+   내가 계속 응원...
+
+   3
+   곁에 있을 테니까.
+
+   4
+   슬슬 일어나...
+
+   5
+   일어나!
+*/
 
 var idleDialogues = [
 
-    [
+    {
+        text:
+            "슬슬 일어나, 언제까지 늘어져 있을거야?",
+        emotion: 1
+    },
 
-        {
-            text:
-                "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
-            emotion: 1
-        },
+    {
+        text:
+            "내가 계속 응원... 아니, 응원이라고 해야하나.",
+        emotion: 7
+    },
 
-        {
-            text:
-                "내가 계속 응원... 아니, 응원이라고 해야하나.",
-            emotion: 7
-        },
+    {
+        text:
+            "곁에 있을 테니까.",
+        emotion: 5
+    },
 
-        {
-            text:
-                "곁에 있을테니까.",
-            emotion: 5
-        }
+    {
+        text:
+            "슬슬 일어나, 언제까지 늘어져 있을거야?",
+        emotion: 1
+    },
 
-    ],
-
-
-    [
-
-        {
-            text:
-                "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
-            emotion: 1
-        },
-
-        {
-            text:
-                "...",
-            emotion: 7
-        },
-
-        {
-            text:
-                "감독생? 나 그런 거 안 봐주거든.",
-            emotion: 4
-        },
-
-        {
-            text:
-                "내가 이런 거에선 좀 깐깐해서 말이야.",
-            emotion: 3
-        },
-
-        {
-            text:
-                "일어나!",
-            emotion: 4
-        }
-
-    ]
+    {
+        text:
+            "일어나!",
+        emotion: 4
+    }
 
 ];
 
@@ -773,9 +764,10 @@ function startIdleDialogue() {
         "idle";
 
 
-    idleIndex =
-        0;
-
+    /*
+       idleIndex는 이전에 끝난 위치를
+       그대로 이어간다.
+    */
 
     showIdleDialogue();
 
@@ -788,53 +780,31 @@ function startIdleDialogue() {
 
 function showIdleDialogue() {
 
-    /*
-       현재 idle 묶음을 가져온다.
-    */
-
-    var group =
-        idleDialogues[idleGroup];
-
-
-    if (!group) {
-
-        /*
-           모든 idle 대사를 다 봤다면
-           첫 번째 묶음으로 돌아간다.
-        */
-
-        idleGroup = 0;
-
-        group =
-            idleDialogues[idleGroup];
-
-    }
-
-
-    if (!group) {
+    if (
+        idleDialogues.length === 0
+    ) {
 
         return;
 
     }
 
 
-    var dialogue =
-        group[idleIndex];
+    /*
+       끝까지 갔으면 다시 처음부터
+    */
 
-
-    if (!dialogue) {
-
-        /*
-           잘못된 index가 들어오면
-           현재 묶음의 처음으로 복구
-        */
+    if (
+        idleIndex >=
+        idleDialogues.length
+    ) {
 
         idleIndex = 0;
 
-        dialogue =
-            group[idleIndex];
-
     }
+
+
+    var dialogue =
+        idleDialogues[idleIndex];
 
 
     if (!dialogue) {
@@ -874,28 +844,22 @@ function nextIdleDialogue() {
     }
 
 
-    var group =
-        idleDialogues[idleGroup];
+    /*
+       다음 대사로 이동
+    */
 
-
-    if (!group) {
-
-        return;
-
-    }
+    idleIndex++;
 
 
     /*
-       현재 묶음에 다음 대사가 있으면
-       무조건 다음 대사로 이동한다.
+       idle 대사가 아직 남아있으면
+       바로 다음 대사를 보여준다.
     */
 
     if (
-        idleIndex + 1 <
-        group.length
+        idleIndex <
+        idleDialogues.length
     ) {
-
-        idleIndex++;
 
         showIdleDialogue();
 
@@ -905,47 +869,22 @@ function nextIdleDialogue() {
 
 
     /*
-       현재 묶음의 마지막 대사까지 끝났다.
+       idle 대사를 전부 봤다면
+       처음으로 돌아간다.
     */
-
-    resetCharacterEmotion();
-
-
-    /*
-       다음 idle 묶음으로 이동한다.
-    */
-
-    idleGroup++;
-
-    /*
-       다음 묶음이 없으면
-       다시 첫 번째 묶음부터.
-    */
-
-    if (
-        idleGroup >=
-        idleDialogues.length
-    ) {
-
-        idleGroup = 0;
-
-    }
-
 
     idleIndex = 0;
 
-
-    /*
-       idle 대화를 끝내고
-       다시 일반 상태로 만든다.
-    */
 
     dialogueMode =
         "normal";
 
 
+    resetCharacterEmotion();
+
+
     /*
-       다음 idle은 30초 후.
+       다음 idle 이벤트까지 다시 30초
     */
 
     resetIdleTimer();
@@ -1019,8 +958,8 @@ function startShakeDialogue() {
 
 
     /*
-       일반 대사가 아직 남아있으면
-       흔들기 이벤트 금지
+       현재 일반 대사가 남아있으면
+       흔들기 이벤트를 막는다.
     */
 
     if (
@@ -1100,8 +1039,8 @@ function nextShakeDialogue() {
 
 
     if (
-        shakeDialogueIndex + 1 <
-        shakeDialogues.length
+        shakeDialogueIndex <
+        shakeDialogues.length - 1
     ) {
 
         shakeDialogueIndex++;
@@ -1156,8 +1095,8 @@ function addSteps(amount) {
 
 
     /*
-       idle 대화 중 걸으면
-       idle 대화 종료
+       idle 중 걸으면
+       idle 대사를 종료한다.
     */
 
     if (
@@ -1166,10 +1105,6 @@ function addSteps(amount) {
 
         dialogueMode =
             "normal";
-
-
-        idleIndex =
-            0;
 
 
         resetCharacterEmotion();
@@ -1277,68 +1212,17 @@ function detectStep(event) {
 
 
 /*
-   한 번 크게 흔든 것을
-   여러 센서 이벤트로 중복해서 세지 않기 위한 상태
+   이전에 잘 작동했던
+   단순한 방식으로 되돌림.
 */
 
 var shakeCount = 0;
 
-var shakeStartTime = 0;
-
-var shakeMoving = false;
-
 var shakeLastTime = 0;
 
-
-/*
-   흔들기 강도
-
-   너무 작게 움직이는 것은 무시
-*/
+var shakeRequiredCount = 4;
 
 var shakeThreshold = 4.5;
-
-
-/*
-   필요한 흔들기 횟수
-
-   일단 10회.
-   이전에 4번 정도에서 발동되던 문제를
-   중복 카운트 방지로 해결한다.
-*/
-
-var shakeRequiredCount = 10;
-
-
-/*
-   흔들기 전체 시간
-*/
-
-var shakeWindow = 7000;
-
-
-/*
-   한 번의 흔들기가 끝났다고
-   판단하기까지의 시간
-*/
-
-var shakeRestTime = 180;
-
-
-/*
-   센서 중복 방지 시간
-*/
-
-var shakeMinInterval = 100;
-
-
-/*
-   발동 후 쿨다운
-*/
-
-var shakeCooldown = 4000;
-
-var shakeCooldownUntil = 0;
 
 
 /* =================================================
@@ -1359,8 +1243,8 @@ function detectShake(event) {
 
 
     /*
-       일반 상태가 아니면
-       흔들기 카운트를 초기화
+       idle이나 다른 대사 중에는
+       흔들기를 세지 않는다.
     */
 
     if (
@@ -1369,17 +1253,13 @@ function detectShake(event) {
 
         shakeCount = 0;
 
-        shakeStartTime = 0;
-
-        shakeMoving = false;
-
         return;
 
     }
 
 
     /*
-       일반 대사가 아직 끝나지 않았다면
+       일반 대사가 아직 남아있으면
        흔들기 이벤트를 막는다.
     */
 
@@ -1394,10 +1274,6 @@ function detectShake(event) {
     ) {
 
         shakeCount = 0;
-
-        shakeStartTime = 0;
-
-        shakeMoving = false;
 
         return;
 
@@ -1414,27 +1290,6 @@ function detectShake(event) {
         acceleration.z || 0;
 
 
-    var now =
-        new Date().getTime();
-
-
-    /*
-       발동 직후 쿨다운
-    */
-
-    if (
-        now < shakeCooldownUntil
-    ) {
-
-        return;
-
-    }
-
-
-    /*
-       중력 포함 가속도 크기
-    */
-
     var magnitude =
         Math.sqrt(
             x * x +
@@ -1443,158 +1298,48 @@ function detectShake(event) {
         );
 
 
-    /*
-       이전 값과 비교할 수 있도록
-       간단한 변화량을 만든다.
-    */
-
-    if (
-        typeof detectShake.lastMagnitude ===
-        "undefined"
-    ) {
-
-        detectShake.lastMagnitude =
-            magnitude;
-
-        return;
-
-    }
-
-
-    var change =
-        Math.abs(
-            magnitude -
-            detectShake.lastMagnitude
-        );
-
-
-    detectShake.lastMagnitude =
-        magnitude;
+    var now =
+        new Date().getTime();
 
 
     /*
-       충분히 큰 움직임이 아니면 무시
+       움직임이 충분히 크지 않으면 무시
     */
 
     if (
-        change <
+        magnitude <
         shakeThreshold
     ) {
 
-        /*
-           움직임이 멈췄으면
-           다음 흔들기를 받을 준비
-        */
-
-        if (
-            shakeMoving &&
-            now - shakeLastTime >
-            shakeRestTime
-        ) {
-
-            shakeMoving =
-                false;
-
-        }
-
         return;
 
     }
 
 
     /*
-       현재 한 번의 흔들기 동작 중이라면
-       추가로 세지 않는다.
-
-       이 부분 때문에
-       한 번 휙 흔들었을 때 발생하는
-       여러 센서 이벤트가 1회로 합쳐진다.
-    */
-
-    if (
-        shakeMoving
-    ) {
-
-        shakeLastTime =
-            now;
-
-        return;
-
-    }
-
-
-    /*
-       센서 중복 방지
+       너무 빠르게 들어오는
+       센서 이벤트는 하나로 처리
     */
 
     if (
         now - shakeLastTime <
-        shakeMinInterval
+        300
     ) {
 
         return;
 
     }
-
-
-    /*
-       새로운 흔들기
-    */
-
-    shakeMoving =
-        true;
 
 
     shakeLastTime =
         now;
 
 
-    /*
-       첫 흔들기라면
-       시간 측정 시작
-    */
-
-    if (
-        shakeStartTime === 0
-    ) {
-
-        shakeStartTime =
-            now;
-
-        shakeCount =
-            0;
-
-    }
-
-
-    /*
-       너무 오래 걸렸으면
-       처음부터 다시
-    */
-
-    if (
-        now - shakeStartTime >
-        shakeWindow
-    ) {
-
-        shakeStartTime =
-            now;
-
-        shakeCount =
-            0;
-
-    }
-
-
-    /*
-       흔들기 1회 추가
-    */
-
     shakeCount++;
 
 
     /*
-       필요한 횟수 도달
+       흔들기 4회
     */
 
     if (
@@ -1606,21 +1351,8 @@ function detectShake(event) {
             0;
 
 
-        shakeStartTime =
-            0;
-
-
-        shakeMoving =
-            false;
-
-
         lastShakeTime =
             now;
-
-
-        shakeCooldownUntil =
-            now +
-            shakeCooldown;
 
 
         startShakeDialogue();
