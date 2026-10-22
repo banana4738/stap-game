@@ -26,95 +26,186 @@ var lastShakeTime = 0;
 
 
 /* =================================================
-   기본 표정 / 대사 알림음
+   기본 표정
    ================================================= */
 
 var defaultEmotion = 5;
 
 
-/*
+/* =================================================
    대사 알림음
-*/
+   ================================================= */
 
-var dialogueSound =
-    new Audio("sounds/notification.mp3");
-
-dialogueSound.preload = "auto";
-
-var dialogueSoundUnlocked = false;
+var audioContext = null;
 
 
 /*
-   브라우저의 소리 재생 제한을 풀기 위해
-   첫 클릭/터치 때 오디오를 한 번 활성화
+   처음 화면을 누르면
+   브라우저의 오디오 기능을 활성화
 */
 
-function unlockDialogueSound() {
+function unlockAudio() {
 
     if (
-        dialogueSoundUnlocked
+        audioContext === null
     ) {
 
-        return;
+        var AudioContext =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+        if (!AudioContext) {
+
+            return;
+
+        }
+
+        audioContext =
+            new AudioContext();
 
     }
 
-    dialogueSound.volume = 0;
-
-    var promise =
-        dialogueSound.play();
 
     if (
-        promise !== undefined
+        audioContext.state ===
+        "suspended"
     ) {
 
-        promise.then(
-            function() {
-
-                dialogueSound.pause();
-
-                dialogueSound.currentTime = 0;
-
-                dialogueSound.volume = 1;
-
-                dialogueSoundUnlocked = true;
-
-            }
-        ).catch(
-            function(error) {
-
-                console.log(error);
-
-                dialogueSound.volume = 1;
-
-            }
-        );
+        audioContext.resume();
 
     }
 
 }
 
 
+/*
+   띠링띠링 소리
+*/
+
 function playDialogueSound() {
 
     if (
-        !dialogueSoundUnlocked
+        audioContext === null
     ) {
 
         return;
 
     }
 
-    dialogueSound.currentTime = 0;
 
-    dialogueSound.volume = 1;
+    if (
+        audioContext.state ===
+        "suspended"
+    ) {
 
-    dialogueSound.play().catch(
-        function(error) {
+        audioContext.resume();
 
-            console.log(error);
+    }
 
-        }
+
+    var now =
+        audioContext.currentTime;
+
+
+    /*
+       첫 번째 음
+    */
+
+    var oscillator1 =
+        audioContext.createOscillator();
+
+    var gain1 =
+        audioContext.createGain();
+
+
+    oscillator1.type =
+        "sine";
+
+    oscillator1.frequency.setValueAtTime(
+        880,
+        now
+    );
+
+
+    gain1.gain.setValueAtTime(
+        0.0001,
+        now
+    );
+
+    gain1.gain.exponentialRampToValueAtTime(
+        0.12,
+        now + 0.01
+    );
+
+    gain1.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + 0.13
+    );
+
+
+    oscillator1.connect(gain1);
+
+    gain1.connect(
+        audioContext.destination
+    );
+
+
+    oscillator1.start(now);
+
+    oscillator1.stop(
+        now + 0.14
+    );
+
+
+    /*
+       두 번째 음
+    */
+
+    var oscillator2 =
+        audioContext.createOscillator();
+
+    var gain2 =
+        audioContext.createGain();
+
+
+    oscillator2.type =
+        "sine";
+
+    oscillator2.frequency.setValueAtTime(
+        1174.66,
+        now + 0.10
+    );
+
+
+    gain2.gain.setValueAtTime(
+        0.0001,
+        now + 0.10
+    );
+
+    gain2.gain.exponentialRampToValueAtTime(
+        0.12,
+        now + 0.11
+    );
+
+    gain2.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + 0.24
+    );
+
+
+    oscillator2.connect(gain2);
+
+    gain2.connect(
+        audioContext.destination
+    );
+
+
+    oscillator2.start(
+        now + 0.10
+    );
+
+    oscillator2.stop(
+        now + 0.25
     );
 
 }
@@ -531,6 +622,7 @@ function nextNormalDialogue() {
 
     }
 
+
     if (
         currentDialogueIndex <
         lines.length - 1
@@ -545,8 +637,9 @@ function nextNormalDialogue() {
     }
 
 
-    dialogueMode =
-        "normal";
+    /*
+       대화가 완전히 끝남
+    */
 
     resetCharacterEmotion();
 
@@ -642,6 +735,7 @@ function nextIdleDialogue() {
 
     }
 
+
     if (
         idleIndex <
         group.length - 1
@@ -729,6 +823,20 @@ function resetIdleTimer() {
 
 function startShakeDialogue() {
 
+    /*
+       현재 진행 중인 대사가 있다면
+       흔들기 대사를 시작하지 않음
+    */
+
+    if (
+        dialogueMode !== "normal"
+    ) {
+
+        return;
+
+    }
+
+
     clearIdleTimer();
 
     dialogueMode =
@@ -784,6 +892,7 @@ function nextShakeDialogue() {
 
     }
 
+
     if (
         shakeDialogueIndex <
         shakeDialogues.length - 1
@@ -835,7 +944,8 @@ function addSteps(amount) {
 
 
     /*
-       걷기 시작하면 idle 종료
+       idle 대화 중 걷기 시작하면
+       idle 대화를 종료
     */
 
     if (
@@ -854,7 +964,7 @@ function addSteps(amount) {
 
 
     /*
-       흔들기 중이 아니라면
+       흔들기 대화 중이 아니라면
        idle 타이머 재시작
     */
 
@@ -925,10 +1035,6 @@ function detectStep(event) {
         new Date().getTime();
 
 
-    /*
-       흔들기 직후에는 걸음 판정을 잠시 막음
-    */
-
     if (
         now - lastShakeTime < 1000
     ) {
@@ -957,13 +1063,14 @@ function detectStep(event) {
    흔들기 감지
    ================================================= */
 
+
 /*
-   흔들기 감지 설정
+   너무 민감하지 않도록 설정
 
-   기존보다 훨씬 쉽게 발동하도록 조정.
-
-   너무 작은 움직임 -> 무시
-   여러 번 움직임 -> 발동
+   살짝 움직임       -> 무시
+   걷는 중 움직임    -> 무시
+   어느 정도 크게
+   여러 번 흔들기    -> 발동
 */
 
 var shakeLastMagnitude = null;
@@ -974,24 +1081,25 @@ var shakeStartTime = 0;
 
 
 /*
-   움직임을 확인하는 시간
+   움직임을 모으는 시간
 */
 
-var shakeWindow = 1200;
+var shakeWindow = 800;
 
 
 /*
-   한 번의 움직임으로 인정하는 변화량
+   이 정도 이상 차이가 나야
+   큰 움직임으로 인정
 */
 
-var shakeChangeThreshold = 1.8;
+var shakeChangeThreshold = 3.5;
 
 
 /*
-   필요한 움직임 횟수
+   3번 이상 큰 변화가 있어야 발동
 */
 
-var shakeRequiredChanges = 2;
+var shakeRequiredChanges = 3;
 
 
 /*
@@ -1030,7 +1138,7 @@ function detectShake(event) {
 
 
     /*
-       흔들기 대화 중에는
+       흔들기 대사 중에는
        다시 발동하지 않음
     */
 
@@ -1044,11 +1152,48 @@ function detectShake(event) {
 
 
     /*
+       idle / 일반 대화가 진행 중이면
+       흔들기 이벤트를 막음
+
+       일반 대화도 마지막 대사까지
+       아직 진행 중이면 막는다.
+    */
+
+    if (
+        dialogueMode === "idle"
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        dialogueMode === "normal"
+    ) {
+
+        var lines =
+            dialogues[currentStep];
+
+        if (
+            lines &&
+            currentDialogueIndex <
+            lines.length - 1
+        ) {
+
+            return;
+
+        }
+
+    }
+
+
+    /*
        흔들기 직후 쿨다운
     */
 
     if (
-        now - lastShakeTime < 2500
+        now - lastShakeTime < 3000
     ) {
 
         return;
@@ -1057,7 +1202,7 @@ function detectShake(event) {
 
 
     /*
-       첫 센서값 저장
+       첫 센서값
     */
 
     if (
@@ -1119,8 +1264,8 @@ function detectShake(event) {
 
 
     /*
-       정해진 시간 안에
-       필요한 횟수만큼 움직이면 발동
+       짧은 시간에
+       3번 이상 큰 움직임
     */
 
     if (
@@ -1153,8 +1298,8 @@ function detectShake(event) {
 
 
         /*
-           너무 느리게 움직였으면
-           다시 처음부터
+           너무 느리게 흔들었으면
+           다시 시작
         */
 
         shakeChangeCount =
@@ -1223,11 +1368,7 @@ if (
             "click",
             function motionPermission() {
 
-                /*
-                   클릭 순간에 오디오도 활성화
-                */
-
-                unlockDialogueSound();
+                unlockAudio();
 
 
                 DeviceMotionEvent
@@ -1265,14 +1406,9 @@ if (
 
     else {
 
-        /*
-           안드로이드 등에서는
-           첫 클릭으로 오디오 활성화
-        */
-
         document.body.addEventListener(
             "click",
-            unlockDialogueSound,
+            unlockAudio,
             {
                 once: true
             }
@@ -1292,10 +1428,11 @@ if (
 function handleDialogueClick() {
 
     /*
-       클릭할 때마다 오디오 활성화 시도
+       화면을 한 번 누르면
+       오디오 활성화
     */
 
-    unlockDialogueSound();
+    unlockAudio();
 
 
     if (
