@@ -2,6 +2,11 @@
    감독생 만보기
    ================================================= */
 
+
+/* =================================================
+   기본 변수
+   ================================================= */
+
 var steps = 0;
 
 var currentStep = 0;
@@ -16,16 +21,70 @@ var idleIndex = 0;
 
 var shakeDialogueIndex = 0;
 
+
+/* 걸음 감지용 */
+
 var lastStepTime = 0;
 
-var lastShakeTime = 0;
+
+/* 흔들기 감지용 */
+
+var shakeCount = 0;
+
+var shakeStartTime = 0;
+
+var shakeLastTime = 0;
+
+var shakeCooldownUntil = 0;
 
 
 /* =================================================
-   기본 표정
+   설정
    ================================================= */
 
+
+/*
+   기본 표정
+*/
+
 var defaultEmotion = 5;
+
+
+/*
+   흔들기 몇 번 해야 하는가
+*/
+
+var shakeRequiredCount = 6;
+
+
+/*
+   흔들기라고 인정할 최소 변화량
+*/
+
+var shakeThreshold = 5.5;
+
+
+/*
+   흔들기 사이 최소 시간
+*/
+
+var shakeMinInterval = 180;
+
+
+/*
+   흔들기를 시작한 뒤
+   이 시간 안에 필요한 횟수를 채워야 함
+*/
+
+var shakeWindow = 5000;
+
+
+/*
+   흔들기 이벤트가 발생한 뒤
+   다시 감지하기까지 대기
+*/
+
+var shakeCooldown = 3500;
 
 
 /* =================================================
@@ -49,11 +108,13 @@ function unlockAudio() {
             window.AudioContext ||
             window.webkitAudioContext;
 
+
         if (!AudioContext) {
 
             return;
 
         }
+
 
         audioContext =
             new AudioContext();
@@ -102,8 +163,13 @@ function playDialogueSound() {
         audioContext.currentTime;
 
 
+    /*
+       첫 번째 음
+    */
+
     var oscillator1 =
         audioContext.createOscillator();
+
 
     var gain1 =
         audioContext.createGain();
@@ -151,8 +217,13 @@ function playDialogueSound() {
     );
 
 
+    /*
+       두 번째 음
+    */
+
     var oscillator2 =
         audioContext.createOscillator();
+
 
     var gain2 =
         audioContext.createGain();
@@ -212,8 +283,10 @@ function playDialogueSound() {
 var stepsElement =
     document.getElementById("steps");
 
+
 var messageElement =
     document.getElementById("message");
+
 
 var characterImage =
     document.getElementById("characterImage");
@@ -224,6 +297,7 @@ var characterImage =
    ================================================= */
 
 var dialogues = {
+
 
     0: [
 
@@ -440,40 +514,29 @@ var dialogues = {
    ================================================= */
 
 var milestones = [
+
     0,
+
     50,
+
     100,
+
     500,
+
     1000,
+
     2500,
+
     5000,
+
     10000
+
 ];
 
 
 /* =================================================
    30초 후 idle 대사
    ================================================= */
-
-/*
-   이번에는 묶음을 사용하지 않는다.
-   그냥 순서대로 한 줄씩 진행한다.
-
-   1
-   슬슬 일어나...
-
-   2
-   내가 계속 응원...
-
-   3
-   곁에 있을 테니까.
-
-   4
-   슬슬 일어나...
-
-   5
-   일어나!
-*/
 
 var idleDialogues = [
 
@@ -550,7 +613,7 @@ function updateStepDisplay() {
 
 
 /* =================================================
-   현재 마일스톤
+   현재 마일스톤 확인
    ================================================= */
 
 function getCurrentMilestone() {
@@ -604,7 +667,7 @@ function clearIdleTimer() {
 
 
 /* =================================================
-   기본 표정 복구
+   기본 표정으로 복구
    ================================================= */
 
 function resetCharacterEmotion() {
@@ -645,6 +708,14 @@ function startDialogue(step) {
 
     currentDialogueIndex =
         0;
+
+
+    /*
+       새로운 일반 대사가 시작되면
+       흔들기 카운트도 초기화
+    */
+
+    resetShake();
 
 
     showNormalDialogue();
@@ -735,6 +806,10 @@ function nextNormalDialogue() {
     }
 
 
+    /*
+       일반 대사가 끝남
+    */
+
     resetCharacterEmotion();
 
     resetIdleTimer();
@@ -747,6 +822,11 @@ function nextNormalDialogue() {
    ================================================= */
 
 function startIdleDialogue() {
+
+    /*
+       만보를 채웠으면
+       idle 대사를 띄우지 않는다.
+    */
 
     if (
         steps >= 10000
@@ -765,9 +845,12 @@ function startIdleDialogue() {
 
 
     /*
-       idleIndex는 이전에 끝난 위치를
-       그대로 이어간다.
+       idle은 항상 처음부터 시작
     */
+
+    idleIndex =
+        0;
+
 
     showIdleDialogue();
 
@@ -788,10 +871,6 @@ function showIdleDialogue() {
 
     }
 
-
-    /*
-       끝까지 갔으면 다시 처음부터
-    */
 
     if (
         idleIndex >=
@@ -844,16 +923,11 @@ function nextIdleDialogue() {
     }
 
 
-    /*
-       다음 대사로 이동
-    */
-
     idleIndex++;
 
 
     /*
-       idle 대사가 아직 남아있으면
-       바로 다음 대사를 보여준다.
+       아직 idle 대사가 남아 있음
     */
 
     if (
@@ -869,11 +943,11 @@ function nextIdleDialogue() {
 
 
     /*
-       idle 대사를 전부 봤다면
-       처음으로 돌아간다.
+       idle 대사가 모두 끝남
     */
 
-    idleIndex = 0;
+    idleIndex =
+        0;
 
 
     dialogueMode =
@@ -882,10 +956,6 @@ function nextIdleDialogue() {
 
     resetCharacterEmotion();
 
-
-    /*
-       다음 idle 이벤트까지 다시 30초
-    */
 
     resetIdleTimer();
 
@@ -923,6 +993,11 @@ function resetIdleTimer() {
         setTimeout(
             function() {
 
+                /*
+                   타이머가 끝났을 때도
+                   반드시 normal인지 확인
+                */
+
                 if (
                     dialogueMode === "normal"
                 ) {
@@ -939,10 +1014,29 @@ function resetIdleTimer() {
 
 
 /* =================================================
-   흔들기 대화 시작
+   흔들기 카운트 초기화
+   ================================================= */
+
+function resetShake() {
+
+    shakeCount =
+        0;
+
+    shakeStartTime =
+        0;
+
+}
+
+
+/* =================================================
+   흔들기 이벤트 시작
    ================================================= */
 
 function startShakeDialogue() {
+
+    /*
+       다른 대화 중에는 절대 끼어들지 않는다.
+    */
 
     if (
         dialogueMode !== "normal"
@@ -953,20 +1047,22 @@ function startShakeDialogue() {
     }
 
 
+    /*
+       일반 대사가 아직 남아 있으면
+       흔들기 이벤트를 발생시키지 않는다.
+    */
+
     var lines =
         dialogues[currentStep];
 
-
-    /*
-       현재 일반 대사가 남아있으면
-       흔들기 이벤트를 막는다.
-    */
 
     if (
         lines &&
         currentDialogueIndex <
         lines.length - 1
     ) {
+
+        resetShake();
 
         return;
 
@@ -982,6 +1078,9 @@ function startShakeDialogue() {
 
     shakeDialogueIndex =
         0;
+
+
+    resetShake();
 
 
     showShakeDialogue();
@@ -1052,12 +1151,16 @@ function nextShakeDialogue() {
     }
 
 
-    dialogueMode =
-        "normal";
-
+    /*
+       흔들기 대사가 끝남
+    */
 
     shakeDialogueIndex =
         0;
+
+
+    dialogueMode =
+        "normal";
 
 
     resetCharacterEmotion();
@@ -1095,8 +1198,7 @@ function addSteps(amount) {
 
 
     /*
-       idle 중 걸으면
-       idle 대사를 종료한다.
+       걷기 시작하면 idle 대사를 종료
     */
 
     if (
@@ -1107,18 +1209,21 @@ function addSteps(amount) {
             "normal";
 
 
+        idleIndex =
+            0;
+
+
         resetCharacterEmotion();
 
     }
 
 
-    if (
-        dialogueMode !== "shake"
-    ) {
+    /*
+       걸음을 걸었다고 흔들기 이벤트가
+       같이 발생하지 않도록 카운트 초기화
+    */
 
-        resetIdleTimer();
-
-    }
+    resetShake();
 
 
     var newMilestone =
@@ -1133,6 +1238,19 @@ function addSteps(amount) {
             newMilestone
         );
 
+        return;
+
+    }
+
+
+    /*
+       일반 상태라면 다시
+       30초 타이머 시작
+    */
+
+    if (
+        dialogueMode === "normal"
+    ) {
 
         resetIdleTimer();
 
@@ -1142,10 +1260,15 @@ function addSteps(amount) {
 
 
 /* =================================================
-   실제 걸음 감지
+   걸음 감지
    ================================================= */
 
 function detectStep(event) {
+
+    /*
+       걸음 수는 기존처럼
+       accelerationIncludingGravity 사용.
+    */
 
     var acceleration =
         event.accelerationIncludingGravity;
@@ -1161,8 +1284,10 @@ function detectStep(event) {
     var x =
         acceleration.x || 0;
 
+
     var y =
         acceleration.y || 0;
+
 
     var z =
         acceleration.z || 0;
@@ -1180,9 +1305,13 @@ function detectStep(event) {
         new Date().getTime();
 
 
+    /*
+       너무 빠르게 걸음이 중복되는 것 방지
+    */
+
     if (
-        now - lastShakeTime <
-        1000
+        now - lastStepTime <
+        350
     ) {
 
         return;
@@ -1190,9 +1319,12 @@ function detectStep(event) {
     }
 
 
+    /*
+       기존 기준 유지
+    */
+
     if (
-        magnitude > 11 &&
-        now - lastStepTime > 350
+        magnitude > 11
     ) {
 
         lastStepTime =
@@ -1210,48 +1342,42 @@ function detectStep(event) {
    흔들기 감지
    ================================================= */
 
-
 /*
-   이전에 잘 작동했던
-   단순한 방식으로 되돌림.
+   중요:
+   accelerationIncludingGravity의
+   절대값을 기준으로 잡지 않는다.
+
+   가만히 있어도 중력 때문에 약 9.8이 나오므로
+   그렇게 하면 가만히 있는 폰도 흔든 것으로
+   오인할 수 있다.
+
+
+   대신 센서값의 "변화량"을 본다.
 */
 
-var shakeCount = 0;
 
-var shakeLastTime = 0;
-
-var shakeRequiredCount = 4;
-
-var shakeThreshold = 4.5;
+var previousShakeMagnitude = null;
 
 
 /* =================================================
-   흔들기 감지
+   흔들기 감지 함수
    ================================================= */
 
 function detectShake(event) {
 
-    var acceleration =
-        event.accelerationIncludingGravity;
-
-
-    if (!acceleration) {
-
-        return;
-
-    }
-
-
     /*
-       idle이나 다른 대사 중에는
-       흔들기를 세지 않는다.
+       idle / shake 대화 중에는
+       흔들기 감지를 하지 않는다.
     */
 
     if (
         dialogueMode !== "normal"
     ) {
 
-        shakeCount = 0;
+        resetShake();
+
+        previousShakeMagnitude =
+            null;
 
         return;
 
@@ -1259,8 +1385,8 @@ function detectShake(event) {
 
 
     /*
-       일반 대사가 아직 남아있으면
-       흔들기 이벤트를 막는다.
+       일반 대사가 아직 남아있다면
+       흔들기 이벤트 금지.
     */
 
     var lines =
@@ -1273,7 +1399,21 @@ function detectShake(event) {
         lines.length - 1
     ) {
 
-        shakeCount = 0;
+        resetShake();
+
+        previousShakeMagnitude =
+            null;
+
+        return;
+
+    }
+
+
+    var acceleration =
+        event.accelerationIncludingGravity;
+
+
+    if (!acceleration) {
 
         return;
 
@@ -1283,12 +1423,18 @@ function detectShake(event) {
     var x =
         acceleration.x || 0;
 
+
     var y =
         acceleration.y || 0;
+
 
     var z =
         acceleration.z || 0;
 
+
+    /*
+       현재 센서값의 크기
+    */
 
     var magnitude =
         Math.sqrt(
@@ -1298,16 +1444,59 @@ function detectShake(event) {
         );
 
 
+    /*
+       첫 번째 센서값이면
+       비교할 값만 저장.
+    */
+
+    if (
+        previousShakeMagnitude === null
+    ) {
+
+        previousShakeMagnitude =
+            magnitude;
+
+        return;
+
+    }
+
+
+    var change =
+        Math.abs(
+            magnitude -
+            previousShakeMagnitude
+        );
+
+
+    previousShakeMagnitude =
+        magnitude;
+
+
     var now =
         new Date().getTime();
 
 
     /*
-       움직임이 충분히 크지 않으면 무시
+       쿨다운
     */
 
     if (
-        magnitude <
+        now <
+        shakeCooldownUntil
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       변화량이 작으면
+       그냥 일반적인 움직임으로 판단.
+    */
+
+    if (
+        change <
         shakeThreshold
     ) {
 
@@ -1317,13 +1506,13 @@ function detectShake(event) {
 
 
     /*
-       너무 빠르게 들어오는
-       센서 이벤트는 하나로 처리
+       너무 빠르게 들어오는 센서 이벤트는
+       같은 흔들기의 일부로 취급.
     */
 
     if (
         now - shakeLastTime <
-        300
+        shakeMinInterval
     ) {
 
         return;
@@ -1335,11 +1524,59 @@ function detectShake(event) {
         now;
 
 
-    shakeCount++;
+    /*
+       첫 흔들기
+    */
+
+    if (
+        shakeStartTime === 0
+    ) {
+
+        shakeStartTime =
+            now;
+
+        shakeCount =
+            0;
+
+    }
 
 
     /*
-       흔들기 4회
+       흔들기 시작 후 너무 오래 걸렸다면
+       다시 처음부터.
+    */
+
+    if (
+        now - shakeStartTime >
+        shakeWindow
+    ) {
+
+        shakeStartTime =
+            now;
+
+        shakeCount =
+            0;
+
+    }
+
+
+    /*
+       흔들기 1회 추가
+    */
+
+    shakeCount++;
+
+
+    console.log(
+        "흔들기:",
+        shakeCount,
+        "/",
+        shakeRequiredCount
+    );
+
+
+    /*
+       필요한 횟수 도달
     */
 
     if (
@@ -1351,8 +1588,17 @@ function detectShake(event) {
             0;
 
 
-        lastShakeTime =
-            now;
+        shakeStartTime =
+            0;
+
+
+        shakeCooldownUntil =
+            now +
+            shakeCooldown;
+
+
+        previousShakeMagnitude =
+            null;
 
 
         startShakeDialogue();
@@ -1368,11 +1614,19 @@ function detectShake(event) {
 
 function startMotionSensor() {
 
+    /*
+       걸음 감지
+    */
+
     window.addEventListener(
         "devicemotion",
         detectStep
     );
 
+
+    /*
+       흔들기 감지
+    */
 
     window.addEventListener(
         "devicemotion",
@@ -1390,6 +1644,10 @@ if (
     typeof DeviceMotionEvent !==
     "undefined"
 ) {
+
+    /*
+       iPhone / iPad
+    */
 
     if (
         typeof DeviceMotionEvent.requestPermission ===
@@ -1440,6 +1698,10 @@ if (
 
     }
 
+    /*
+       Android / 기타 브라우저
+    */
+
     else {
 
         document.body.addEventListener(
@@ -1459,13 +1721,17 @@ if (
 
 
 /* =================================================
-   화면 클릭
+   대화창 클릭
    ================================================= */
 
 function handleDialogueClick() {
 
     unlockAudio();
 
+
+    /*
+       흔들기 대사
+    */
 
     if (
         dialogueMode === "shake"
@@ -1478,6 +1744,10 @@ function handleDialogueClick() {
     }
 
 
+    /*
+       idle 대사
+    */
+
     if (
         dialogueMode === "idle"
     ) {
@@ -1488,6 +1758,10 @@ function handleDialogueClick() {
 
     }
 
+
+    /*
+       일반 대사
+    */
 
     if (
         dialogueMode === "normal"
@@ -1503,7 +1777,7 @@ function handleDialogueClick() {
 
 
 /* =================================================
-   대화창 클릭
+   대화창 연결
    ================================================= */
 
 var dialogueBox =
@@ -1523,7 +1797,7 @@ if (
 
 
 /* =================================================
-   캐릭터 클릭
+   캐릭터 영역 연결
    ================================================= */
 
 var characterArea =
@@ -1548,6 +1822,12 @@ if (
 
 updateStepDisplay();
 
+
 startDialogue(0);
+
+
+/*
+   시작 후 30초 idle 타이머
+*/
 
 resetIdleTimer();
