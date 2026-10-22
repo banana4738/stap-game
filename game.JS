@@ -467,7 +467,6 @@ var milestones = [
 var idleDialogues = [
 
     [
-
         {
             text:
                 "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
@@ -485,12 +484,10 @@ var idleDialogues = [
                 "곁에 있을테니까.",
             emotion: 5
         }
-
     ],
 
 
     [
-
         {
             text:
                 "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
@@ -520,7 +517,6 @@ var idleDialogues = [
                 "일어나!",
             emotion: 4
         }
-
     ]
 
 ];
@@ -744,9 +740,7 @@ function nextNormalDialogue() {
 
         currentDialogueIndex++;
 
-
         showNormalDialogue();
-
 
         return;
 
@@ -785,6 +779,10 @@ function startIdleDialogue() {
     idleIndex =
         0;
 
+
+    /*
+       현재 idleGroup의 대화를 시작
+    */
 
     showIdleDialogue();
 
@@ -860,6 +858,11 @@ function nextIdleDialogue() {
     }
 
 
+    /*
+       아직 현재 묶음의 대사가 남아있다면
+       다음 대사로 이동
+    */
+
     if (
         idleIndex <
         group.length - 1
@@ -867,25 +870,23 @@ function nextIdleDialogue() {
 
         idleIndex++;
 
-
         showIdleDialogue();
-
 
         return;
 
     }
 
 
-    dialogueMode =
-        "normal";
-
-
-    idleIndex =
-        0;
-
+    /*
+       현재 묶음의 마지막 대사까지 끝남
+    */
 
     resetCharacterEmotion();
 
+
+    /*
+       다음 idle 묶음으로 이동
+    */
 
     if (
         idleGroup <
@@ -896,6 +897,21 @@ function nextIdleDialogue() {
 
     }
 
+
+    /*
+       다음 idle 대사를 준비
+    */
+
+    idleIndex = 0;
+
+
+    dialogueMode =
+        "normal";
+
+
+    /*
+       다음 idle까지 다시 30초 기다림
+    */
 
     resetIdleTimer();
 
@@ -968,8 +984,8 @@ function startShakeDialogue() {
 
 
     /*
-       일반 대사가 아직 끝나지 않았으면
-       흔들기 이벤트를 발생시키지 않음
+       일반 대사가 아직 끝나지 않았다면
+       흔들기 이벤트 금지
     */
 
     if (
@@ -1055,9 +1071,7 @@ function nextShakeDialogue() {
 
         shakeDialogueIndex++;
 
-
         showShakeDialogue();
-
 
         return;
 
@@ -1240,93 +1254,89 @@ function detectStep(event) {
 
 
 /*
-   중요:
-
-   devicemotion은 한 번 흔들어도
-   짧은 시간 동안 여러 번 발생한다.
-
-   따라서 센서 이벤트 개수를 세지 않고,
-   실제로 움직임이 시작되고 멈춘 것을
-   하나의 "흔들기"로 취급한다.
+   한 번의 실제 흔들기를
+   여러 센서 이벤트로 중복 계산하지 않는다.
 */
 
-
-/* 현재 흔들기 횟수 */
 
 var shakeCount = 0;
 
 
-/* 흔들기 시작 시간 */
+/*
+   현재 흔들기 묶음이
+   시작된 시간
+*/
 
 var shakeStartTime = 0;
 
 
-/* 현재 하나의 흔들기 동작을 처리 중인지 */
+/*
+   현재 한 번의 흔들기를
+   처리하고 있는 중인지
+*/
 
 var shakeMoving = false;
 
 
-/* 마지막으로 움직임이 감지된 시간 */
+/*
+   마지막으로 충분히 큰 움직임이
+   감지된 시간
+*/
 
 var shakeLastTime = 0;
 
 
 /*
-   마지막으로 감지한 방향
-
-   1  = 양수 방향
-   -1 = 음수 방향
+   마지막 흔들기 방향
 */
 
 var lastShakeDirection = 0;
 
 
 /*
-   한 번의 흔들기로 인정할
-   최소 움직임 크기
+   흔들기 강도 기준
 
-   꽤 크게 흔들어야 한다.
+   기존보다 약간 널널하게 둔다.
 */
 
-var shakeThreshold = 6.0;
+var shakeThreshold = 5.0;
 
 
 /*
-   실제로 필요한 흔들기 횟수
+   실제 흔들기 횟수
+
+   기존 10회 → 15회
 */
 
-var shakeRequiredCount = 10;
+var shakeRequiredCount = 15;
 
 
 /*
    흔들기 전체 시간
 
-   5초 안에 10번
+   7초 안에 15회
 */
 
-var shakeWindow = 5000;
+var shakeWindow = 7000;
 
 
 /*
-   한 번 크게 움직인 뒤
-   다음 흔들기를 받을 때까지
-   기다리는 시간
+   한 번 흔든 뒤
+   움직임이 끝났다고 판단하는 시간
 */
 
-var shakeRestTime = 180;
+var shakeRestTime = 220;
 
 
 /*
-   이벤트 발생 후
-   흔들기 이벤트가 다시 시작되기까지
-   필요한 최소 시간
+   센서 중복 방지
 */
 
-var shakeMinInterval = 100;
+var shakeMinInterval = 120;
 
 
 /*
-   흔들기 이벤트 발동 후
+   흔들기 이벤트가 발동된 뒤
    다시 감지하기까지의 시간
 */
 
@@ -1334,7 +1344,7 @@ var shakeCooldown = 4000;
 
 
 /*
-   다음 흔들기 이벤트를 받을 수 있는 시간
+   실제 쿨다운 종료 시각
 */
 
 var shakeCooldownUntil = 0;
@@ -1358,7 +1368,8 @@ function detectShake(event) {
 
 
     /*
-       일반 대화 상태에서만 감지
+       idle이나 다른 대화 중에는
+       흔들기 감지하지 않는다.
     */
 
     if (
@@ -1380,7 +1391,7 @@ function detectShake(event) {
 
     /*
        현재 일반 대사가 아직 진행 중이면
-       흔들기 이벤트 금지
+       흔들기 이벤트를 막는다.
     */
 
     var lines =
@@ -1416,17 +1427,12 @@ function detectShake(event) {
         acceleration.z || 0;
 
 
-    /*
-       현재 시간
-    */
-
     var now =
         new Date().getTime();
 
 
     /*
-       흔들기 이벤트 후
-       쿨다운
+       이벤트 발동 후 쿨다운
     */
 
     if (
@@ -1439,10 +1445,7 @@ function detectShake(event) {
 
 
     /*
-       세 축 중 가장 크게 움직이는 축을 사용한다.
-
-       이렇게 하면 폰을 어떤 방향으로 흔들어도
-       어느 정도 감지할 수 있다.
+       세 축 중 가장 크게 움직이는 축을 사용
     */
 
     var axisValue;
@@ -1474,7 +1477,7 @@ function detectShake(event) {
 
 
     /*
-       작은 움직임은 전부 무시
+       작은 움직임은 무시
     */
 
     if (
@@ -1483,8 +1486,7 @@ function detectShake(event) {
     ) {
 
         /*
-           현재 움직임이 끝난 뒤
-           다음 흔들기를 받을 준비
+           이전 흔들기가 끝났는지 확인
         */
 
         if (
@@ -1503,14 +1505,9 @@ function detectShake(event) {
 
 
     /*
-       움직임이 계속되는 동안에는
-       같은 흔들기로 취급한다.
-
-       이 부분이 핵심이다.
-
-       한 번 크게 흔들었을 때
-       devicemotion이 20번 발생해도
-       shakeCount는 1만 올라간다.
+       현재 흔들기 동작 중이면
+       센서 이벤트를 계속 받아도
+       추가 카운트를 하지 않는다.
     */
 
     if (
@@ -1526,7 +1523,7 @@ function detectShake(event) {
 
 
     /*
-       너무 빠른 중복 이벤트 방지
+       센서 중복 방지
     */
 
     if (
@@ -1550,7 +1547,8 @@ function detectShake(event) {
 
 
     /*
-       흔들기 카운트 시작
+       처음 흔들었다면
+       타이머 시작
     */
 
     if (
@@ -1567,8 +1565,8 @@ function detectShake(event) {
 
 
     /*
-       5초가 넘었다면
-       다시 처음부터 센다.
+       7초가 지나면
+       지금까지의 흔들기 횟수를 초기화
     */
 
     if (
@@ -1582,11 +1580,14 @@ function detectShake(event) {
         shakeCount =
             0;
 
+        lastShakeDirection =
+            0;
+
     }
 
 
     /*
-       현재 방향
+       현재 흔들기 방향
     */
 
     var direction;
@@ -1623,8 +1624,9 @@ function detectShake(event) {
 
     }
 
+
     /*
-       이전 흔들기와 방향이 달라졌을 때만
+       방향이 바뀐 경우에만
        새로운 흔들기로 인정
     */
 
@@ -1642,7 +1644,7 @@ function detectShake(event) {
 
 
     /*
-       10번의 실제 흔들기 완료
+       15회 달성
     */
 
     if (
@@ -1885,8 +1887,6 @@ if (
 
 updateStepDisplay();
 
-
 startDialogue(0);
-
 
 resetIdleTimer();
