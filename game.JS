@@ -42,10 +42,6 @@ var shakeStartTime = 0;
 var shakeLastTime = 0;
 
 
-/*
-   기존 흔들기 기준은 그대로 유지
-*/
-
 var shakeWindow = 700;
 
 var shakeChangeThreshold = 4.0;
@@ -65,8 +61,6 @@ var lastStepTime = 0;
    ================================================= */
 
 var audioContext = null;
-
-var audioUnlocked = false;
 
 
 /* =================================================
@@ -390,7 +384,7 @@ function unlockAudio() {
 
         if (!AudioContextClass) {
 
-            return Promise.resolve(false);
+            return;
 
         }
 
@@ -405,41 +399,9 @@ function unlockAudio() {
         "suspended"
     ) {
 
-        return audioContext.resume()
-            .then(
-                function() {
-
-                    audioUnlocked = true;
-
-                    return true;
-
-                }
-            )
-            .catch(
-                function() {
-
-                    return false;
-
-                }
-            );
+        audioContext.resume();
 
     }
-
-
-    audioUnlocked = true;
-
-    return Promise.resolve(true);
-
-}
-
-
-/* =================================================
-   첫 터치에서 오디오 잠금 해제
-   ================================================= */
-
-function prepareAudio() {
-
-    unlockAudio();
 
 }
 
@@ -450,139 +412,124 @@ function prepareAudio() {
 
 function playNotificationSound() {
 
-    unlockAudio()
-        .then(
-            function(success) {
-
-                if (
-                    !success ||
-                    audioContext === null
-                ) {
-
-                    return;
-
-                }
+    unlockAudio();
 
 
-                var now =
-                    audioContext.currentTime;
+    if (
+        audioContext === null
+    ) {
+
+        return;
+
+    }
 
 
-                /*
-                   첫 번째 띠링
-                */
-
-                var oscillator1 =
-                    audioContext.createOscillator();
-
-                var gain1 =
-                    audioContext.createGain();
+    var now =
+        audioContext.currentTime;
 
 
-                oscillator1.type =
-                    "sine";
+    /* 첫 번째 띠링 */
+
+    var oscillator1 =
+        audioContext.createOscillator();
+
+    var gain1 =
+        audioContext.createGain();
 
 
-                oscillator1.frequency.setValueAtTime(
-                    880,
-                    now
-                );
+    oscillator1.type =
+        "sine";
 
 
-                gain1.gain.setValueAtTime(
-                    0.0001,
-                    now
-                );
+    oscillator1.frequency.setValueAtTime(
+        880,
+        now
+    );
 
 
-                gain1.gain.exponentialRampToValueAtTime(
-                    0.12,
-                    now + 0.02
-                );
+    gain1.gain.setValueAtTime(
+        0.0001,
+        now
+    );
 
 
-                gain1.gain.exponentialRampToValueAtTime(
-                    0.0001,
-                    now + 0.25
-                );
+    gain1.gain.exponentialRampToValueAtTime(
+        0.12,
+        now + 0.02
+    );
 
 
-                oscillator1.connect(
-                    gain1
-                );
-
-                gain1.connect(
-                    audioContext.destination
-                );
+    gain1.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + 0.25
+    );
 
 
-                oscillator1.start(
-                    now
-                );
+    oscillator1.connect(gain1);
 
-                oscillator1.stop(
-                    now + 0.27
-                );
+    gain1.connect(
+        audioContext.destination
+    );
 
 
-                /*
-                   두 번째 띠링
-                */
+    oscillator1.start(now);
 
-                var oscillator2 =
-                    audioContext.createOscillator();
-
-                var gain2 =
-                    audioContext.createGain();
+    oscillator1.stop(
+        now + 0.27
+    );
 
 
-                oscillator2.type =
-                    "sine";
+    /* 두 번째 띠링 */
+
+    var oscillator2 =
+        audioContext.createOscillator();
+
+    var gain2 =
+        audioContext.createGain();
 
 
-                oscillator2.frequency.setValueAtTime(
-                    1174,
-                    now + 0.16
-                );
+    oscillator2.type =
+        "sine";
 
 
-                gain2.gain.setValueAtTime(
-                    0.0001,
-                    now + 0.16
-                );
+    oscillator2.frequency.setValueAtTime(
+        1174,
+        now + 0.16
+    );
 
 
-                gain2.gain.exponentialRampToValueAtTime(
-                    0.12,
-                    now + 0.18
-                );
+    gain2.gain.setValueAtTime(
+        0.0001,
+        now + 0.16
+    );
 
 
-                gain2.gain.exponentialRampToValueAtTime(
-                    0.0001,
-                    now + 0.43
-                );
+    gain2.gain.exponentialRampToValueAtTime(
+        0.12,
+        now + 0.18
+    );
 
 
-                oscillator2.connect(
-                    gain2
-                );
-
-                gain2.connect(
-                    audioContext.destination
-                );
+    gain2.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + 0.43
+    );
 
 
-                oscillator2.start(
-                    now + 0.16
-                );
+    oscillator2.connect(gain2);
 
-                oscillator2.stop(
-                    now + 0.45
-                );
+    gain2.connect(
+        audioContext.destination
+    );
 
-            }
-        );
+
+    oscillator2.start(
+        now + 0.16
+    );
+
+    oscillator2.stop(
+        now + 0.45
+    );
 
 }
 
@@ -725,6 +672,14 @@ function showNormalDialogue() {
         dialogue.emotion +
         ".png";
 
+
+    /*
+       기본 대사가 표시될 때도
+       띠링띠링
+    */
+
+    playNotificationSound();
+
 }
 
 
@@ -803,11 +758,6 @@ function startIdleDialogue() {
         0;
 
 
-    /*
-       띠링띠링은
-       idle 이벤트 시작할 때 한 번만.
-    */
-
     playNotificationSound();
 
 
@@ -883,8 +833,7 @@ function nextIdleDialogue() {
 
 
     /*
-       같은 이벤트 안에서
-       다음 대사로 이동.
+       현재 이벤트의 다음 대사
     */
 
     if (
@@ -896,35 +845,71 @@ function nextIdleDialogue() {
 
         showIdleDialogue();
 
+
+        /*
+           첫 번째 이벤트의 마지막 대사
+           "곁에 있을테니까."
+           를 보여준 뒤 30초 대기.
+        */
+
+        if (
+            idleGroup === 0 &&
+            idleIndex === group.length - 1
+        ) {
+
+            dialogueMode =
+                "idleWait";
+
+
+            clearIdleTimer();
+
+
+            idleTimer =
+                setTimeout(
+                    function() {
+
+                        if (
+                            dialogueMode !==
+                            "idleWait"
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        idleGroup =
+                            1;
+
+
+                        idleIndex =
+                            0;
+
+
+                        dialogueMode =
+                            "idle";
+
+
+                        playNotificationSound();
+
+
+                        showIdleDialogue();
+
+                    },
+                    30000
+                );
+
+        }
+
+
         return;
 
     }
 
 
     /*
-       첫 번째 이벤트가 끝나면
-       두 번째 이벤트의 첫 대사로 이동.
-    */
-
-    if (
-        idleGroup <
-        idleDialogues.length - 1
-    ) {
-
-        idleGroup++;
-
-        idleIndex =
-            0;
-
-        showIdleDialogue();
-
-        return;
-
-    }
-
-
-    /*
-       모든 idle 이벤트 종료.
+       두 번째 이벤트가 끝났다면
+       idle 종료.
     */
 
     dialogueMode =
@@ -971,12 +956,18 @@ function resetIdleTimer() {
     }
 
 
+    /*
+       30초 동안 아무것도 하지 않으면
+       idle 이벤트 시작.
+    */
+
     idleTimer =
         setTimeout(
             function() {
 
                 if (
-                    dialogueMode === "normal"
+                    dialogueMode ===
+                    "normal"
                 ) {
 
                     startIdleDialogue();
@@ -1002,7 +993,8 @@ function startShakeDialogue() {
     */
 
     if (
-        dialogueMode === "idle"
+        dialogueMode === "idle" ||
+        dialogueMode === "idleWait"
     ) {
 
         return;
@@ -1126,17 +1118,17 @@ function addSteps(amount) {
 
 
     /*
-       idle 대사 중 실제 걸음이 감지되어도
-       현재 대사를 즉시 없애지 않는다.
-
-       단, 실제 걸음 감지로 들어오는 경우에는
-       다음 대화가 자연스럽게 이어지도록
-       idle 상태만 종료한다.
+       idle 또는 idleWait 중 걸음을 걸으면
+       해당 이벤트를 취소한다.
     */
 
     if (
-        dialogueMode === "idle"
+        dialogueMode === "idle" ||
+        dialogueMode === "idleWait"
     ) {
+
+        clearIdleTimer();
+
 
         dialogueMode =
             "normal";
@@ -1144,6 +1136,7 @@ function addSteps(amount) {
 
         idleIndex =
             0;
+
 
         idleGroup =
             0;
@@ -1264,7 +1257,8 @@ function detectShake(event) {
 
 
     if (
-        dialogueMode === "idle"
+        dialogueMode === "idle" ||
+        dialogueMode === "idleWait"
     ) {
 
         return;
@@ -1474,7 +1468,7 @@ if (
             "click",
             function motionPermission() {
 
-                prepareAudio();
+                unlockAudio();
 
 
                 DeviceMotionEvent
@@ -1529,7 +1523,7 @@ if (
 
 document.addEventListener(
     "click",
-    prepareAudio,
+    unlockAudio,
     {
         once: true
     }
@@ -1543,8 +1537,8 @@ document.addEventListener(
 function handleDialogueClick(event) {
 
     /*
-       대화창을 누른 것은
-       걸음 수 증가와 완전히 별개다.
+       대화창 클릭은
+       걸음 수와 별개로 처리.
     */
 
     if (
@@ -1556,7 +1550,22 @@ function handleDialogueClick(event) {
     }
 
 
-    prepareAudio();
+    unlockAudio();
+
+
+    /*
+       "곁에 있을테니까." 이후
+       30초 기다리는 동안에는
+       클릭해도 아무것도 하지 않는다.
+    */
+
+    if (
+        dialogueMode === "idleWait"
+    ) {
+
+        return;
+
+    }
 
 
     if (
