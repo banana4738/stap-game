@@ -42,11 +42,15 @@ var shakeStartTime = 0;
 var shakeLastTime = 0;
 
 
-var shakeWindow = 700;
+/*
+   약 10번 정도 크게 흔들었을 때 발동
+*/
+
+var shakeWindow = 3000;
 
 var shakeChangeThreshold = 4.0;
 
-var shakeRequiredChanges = 4;
+var shakeRequiredChanges = 10;
 
 
 /* =================================================
@@ -1196,7 +1200,8 @@ function detectStep(event) {
 
 
     /*
-       기존보다 널널하게 판정
+       현재 사용하기로 한
+       예민한 걸음 판정
     */
 
     if (
@@ -1296,6 +1301,11 @@ function detectShake(event) {
     }
 
 
+    /*
+       흔들기 이벤트가 끝난 직후
+       3초 동안 재발동하지 않음.
+    */
+
     if (
         now - shakeLastTime <
         3000
@@ -1305,6 +1315,10 @@ function detectShake(event) {
 
     }
 
+
+    /*
+       첫 센서값 저장
+    */
 
     if (
         shakeLastMagnitude === 0
@@ -1318,6 +1332,10 @@ function detectShake(event) {
     }
 
 
+    /*
+       이전 센서값과 현재 센서값의 차이
+    */
+
     var change =
         Math.abs(
             magnitude -
@@ -1329,6 +1347,10 @@ function detectShake(event) {
         magnitude;
 
 
+    /*
+       작은 움직임은 무시
+    */
+
     if (
         change <
         shakeChangeThreshold
@@ -1338,6 +1360,10 @@ function detectShake(event) {
 
     }
 
+
+    /*
+       큰 움직임 하나 기록
+    */
 
     if (
         shakeChangeCount === 0
@@ -1351,6 +1377,11 @@ function detectShake(event) {
 
     shakeChangeCount++;
 
+
+    /*
+       약 10번의 큰 움직임이
+       3초 안에 들어오면 발동
+    */
 
     if (
         shakeChangeCount >=
@@ -1386,6 +1417,11 @@ function detectShake(event) {
         }
 
 
+        /*
+           너무 천천히 흔들었다면
+           다시 처음부터 센다.
+        */
+
         shakeChangeCount =
             0;
 
@@ -1395,6 +1431,10 @@ function detectShake(event) {
 
     }
 
+
+    /*
+       너무 오래 걸렸으면 초기화
+    */
 
     if (
         shakeChangeCount > 0 &&
