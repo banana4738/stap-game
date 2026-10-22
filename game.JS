@@ -33,20 +33,7 @@ var idleIndex = 0;
 
 var shakeDialogueIndex = 0;
 
-var shakeLastMagnitude = 0;
-
-var shakeChangeCount = 0;
-
-var shakeStartTime = 0;
-
-var shakeLastTime = 0;
-
-
-var shakeWindow = 700;
-
-var shakeChangeThreshold = 4.0;
-
-var shakeRequiredChanges = 4;
+var lastShakeTime = 0;
 
 
 /* =================================================
@@ -1017,6 +1004,9 @@ function showShakeDialogue() {
         dialogue.emotion +
         ".png";
 
+
+    playNotificationSound();
+
 }
 
 
@@ -1196,7 +1186,8 @@ function detectStep(event) {
 
 
     /*
-       기존보다 널널하게 판정
+       현재 잘 올라가는
+       기존 판정값 유지
     */
 
     if (
@@ -1218,6 +1209,83 @@ function detectStep(event) {
    흔들기 감지
    ================================================= */
 
+
+/*
+   아까 잘 작동했던 방식.
+
+   센서 이벤트 개수를 그대로 세지 않고
+   실제 움직임의 방향이 바뀌는 것을
+   하나의 흔들기로 계산한다.
+*/
+
+
+var shakeCount = 0;
+
+var shakeStartTime = 0;
+
+var shakeMoving = false;
+
+var shakeLastMoveTime = 0;
+
+var lastShakeDirection = 0;
+
+
+/*
+   흔들기 민감도
+
+   너무 작은 움직임은 무시한다.
+*/
+
+var shakeThreshold = 6.0;
+
+
+/*
+   실제 필요한 흔들기 횟수
+
+   약 10번.
+*/
+
+var shakeRequiredCount = 10;
+
+
+/*
+   5초 안에 10번 흔들기.
+*/
+
+var shakeWindow = 5000;
+
+
+/*
+   한 번 흔든 뒤
+   다음 흔들기까지 필요한 휴식 시간.
+*/
+
+var shakeRestTime = 180;
+
+
+/*
+   이벤트 발생 후 다시 감지하기 전
+   최소 간격.
+*/
+
+var shakeMinInterval = 100;
+
+
+/*
+   흔들기 이벤트 발생 후
+   다시 흔들기 이벤트를 받을 때까지
+   잠깐 기다린다.
+*/
+
+var shakeCooldown = 4000;
+
+var shakeCooldownUntil = 0;
+
+
+/* =================================================
+   흔들기 감지
+   ================================================= */
+
 function detectShake(event) {
 
     var acceleration =
@@ -1231,19 +1299,51 @@ function detectShake(event) {
     }
 
 
+    /*
+       흔들기 이벤트가 이미 나왔다면
+       현재 대화가 끝날 때까지
+       추가 흔들기를 무시한다.
+    */
+
     if (
-        dialogueMode === "shake"
+        dialogueMode !== "normal"
     ) {
+
+        shakeCount = 0;
+
+        shakeStartTime = 0;
+
+        shakeMoving = false;
+
+        lastShakeDirection = 0;
 
         return;
 
     }
 
 
+    /*
+       현재 일반 대사가 아직 끝나지 않았다면
+       흔들기 이벤트 금지.
+    */
+
+    var lines =
+        dialogues[currentStep];
+
+
     if (
-        dialogueMode === "idle" ||
-        dialogueMode === "idleWait"
+        lines &&
+        currentDialogueIndex <
+        lines.length - 1
     ) {
+
+        shakeCount = 0;
+
+        shakeStartTime = 0;
+
+        shakeMoving = false;
+
+        lastShakeDirection = 0;
 
         return;
 
@@ -1260,45 +1360,16 @@ function detectShake(event) {
         acceleration.z || 0;
 
 
-    var magnitude =
-        Math.sqrt(
-            x * x +
-            y * y +
-            z * z
-        );
-
-
     var now =
         new Date().getTime();
 
 
     /*
-       걸음으로 잡힌 직후에는
-       같은 움직임을 흔들기로 판단하지 않음.
+       흔들기 이벤트 후 쿨다운.
     */
 
     if (
-        now - lastStepTime <
-        1000
-    ) {
-
-        shakeLastMagnitude =
-            magnitude;
-
-        shakeChangeCount =
-            0;
-
-        shakeStartTime =
-            0;
-
-        return;
-
-    }
-
-
-    if (
-        now - shakeLastTime <
-        3000
+        now < shakeCooldownUntil
     ) {
 
         return;
@@ -1306,108 +1377,243 @@ function detectShake(event) {
     }
 
 
+    /*
+       세 축 중 가장 크게 움직이는 축을 선택한다.
+
+       어느 방향으로 폰을 흔들어도
+       어느 정도 인식할 수 있도록 한다.
+    */
+
+    var axisValue;
+
+
     if (
-        shakeLastMagnitude === 0
+        Math.abs(x) >= Math.abs(y) &&
+        Math.abs(x) >= Math.abs(z)
     ) {
 
-        shakeLastMagnitude =
-            magnitude;
+        axisValue = x;
 
-        return;
+    }
+
+    else if (
+        Math.abs(y) >= Math.abs(x) &&
+        Math.abs(y) >= Math.abs(z)
+    ) {
+
+        axisValue = y;
+
+    }
+
+    else {
+
+        axisValue = z;
 
     }
 
 
-    var change =
-        Math.abs(
-            magnitude -
-            shakeLastMagnitude
-        );
-
-
-    shakeLastMagnitude =
-        magnitude;
-
+    /*
+       작은 움직임은 무시한다.
+    */
 
     if (
-        change <
-        shakeChangeThreshold
+        Math.abs(axisValue) <
+        shakeThreshold
     ) {
 
-        return;
-
-    }
-
-
-    if (
-        shakeChangeCount === 0
-    ) {
-
-        shakeStartTime =
-            now;
-
-    }
-
-
-    shakeChangeCount++;
-
-
-    if (
-        shakeChangeCount >=
-        shakeRequiredChanges
-    ) {
+        /*
+           움직임이 끝난 뒤
+           다음 흔들기를 받을 준비.
+        */
 
         if (
-            now - shakeStartTime <=
-            shakeWindow
+            shakeMoving &&
+            now - shakeLastMoveTime >=
+            shakeRestTime
         ) {
 
-            shakeLastTime =
-                now;
-
-
-            shakeChangeCount =
-                0;
-
-
-            shakeStartTime =
-                0;
-
-
-            shakeLastMagnitude =
-                0;
-
-
-            startShakeDialogue();
-
-
-            return;
+            shakeMoving = false;
 
         }
 
-
-        shakeChangeCount =
-            0;
-
-
-        shakeStartTime =
-            now;
+        return;
 
     }
 
 
+    /*
+       현재 움직임이 계속되는 동안에는
+       여러 devicemotion 이벤트가 발생해도
+       하나의 흔들기로 취급한다.
+    */
+
     if (
-        shakeChangeCount > 0 &&
+        shakeMoving
+    ) {
+
+        shakeLastMoveTime =
+            now;
+
+        return;
+
+    }
+
+
+    /*
+       너무 빠른 중복 이벤트 방지.
+    */
+
+    if (
+        now - shakeLastMoveTime <
+        shakeMinInterval
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       새로운 흔들기 시작.
+    */
+
+    shakeMoving = true;
+
+    shakeLastMoveTime =
+        now;
+
+
+    /*
+       흔들기 전체 시간 시작.
+    */
+
+    if (
+        shakeStartTime === 0
+    ) {
+
+        shakeStartTime =
+            now;
+
+        shakeCount =
+            0;
+
+    }
+
+
+    /*
+       5초를 넘겼으면
+       다시 처음부터 센다.
+    */
+
+    if (
         now - shakeStartTime >
         shakeWindow
     ) {
 
-        shakeChangeCount =
+        shakeStartTime =
+            now;
+
+        shakeCount =
+            0;
+
+        lastShakeDirection =
+            0;
+
+    }
+
+
+    /*
+       현재 방향.
+    */
+
+    var direction;
+
+
+    if (
+        axisValue > 0
+    ) {
+
+        direction = 1;
+
+    }
+
+    else {
+
+        direction = -1;
+
+    }
+
+
+    /*
+       첫 흔들기.
+    */
+
+    if (
+        shakeCount === 0
+    ) {
+
+        shakeCount =
+            1;
+
+        lastShakeDirection =
+            direction;
+
+    }
+
+
+    /*
+       방향이 바뀌었을 때만
+       새로운 흔들기로 센다.
+    */
+
+    else if (
+        direction !==
+        lastShakeDirection
+    ) {
+
+        shakeCount++;
+
+        lastShakeDirection =
+            direction;
+
+    }
+
+
+    /*
+       10번 흔들면 이벤트 발생.
+    */
+
+    if (
+        shakeCount >=
+        shakeRequiredCount
+    ) {
+
+        lastShakeTime =
+            now;
+
+
+        shakeCooldownUntil =
+            now +
+            shakeCooldown;
+
+
+        shakeCount =
             0;
 
 
         shakeStartTime =
             0;
+
+
+        shakeMoving =
+            false;
+
+
+        lastShakeDirection =
+            0;
+
+
+        startShakeDialogue();
 
     }
 
@@ -1606,4 +1812,4 @@ updateStepDisplay();
 
 startDialogue(0);
 
-resetIdleTimer(); 
+resetIdleTimer();
