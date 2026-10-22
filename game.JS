@@ -109,8 +109,6 @@ function playDialogueSound() {
         audioContext.currentTime;
 
 
-    /* 첫 번째 띠링 */
-
     var oscillator1 =
         audioContext.createOscillator();
 
@@ -159,8 +157,6 @@ function playDialogueSound() {
         now + 0.14
     );
 
-
-    /* 두 번째 띠링 */
 
     var oscillator2 =
         audioContext.createOscillator();
@@ -871,7 +867,9 @@ function nextIdleDialogue() {
 
         idleIndex++;
 
+
         showIdleDialogue();
+
 
         return;
 
@@ -970,7 +968,7 @@ function startShakeDialogue() {
 
 
     /*
-       일반 대사가 끝나지 않았다면
+       일반 대사가 아직 끝나지 않았으면
        흔들기 이벤트를 발생시키지 않음
     */
 
@@ -1057,7 +1055,9 @@ function nextShakeDialogue() {
 
         shakeDialogueIndex++;
 
+
         showShakeDialogue();
+
 
         return;
 
@@ -1106,6 +1106,11 @@ function addSteps(amount) {
     updateStepDisplay();
 
 
+    /*
+       idle 대화 중 걸으면
+       idle 대화 종료
+    */
+
     if (
         dialogueMode === "idle"
     ) {
@@ -1135,6 +1140,10 @@ function addSteps(amount) {
     var newMilestone =
         getCurrentMilestone();
 
+
+    /*
+       새로운 마일스톤 도달
+    */
 
     if (
         newMilestone !== oldMilestone
@@ -1231,77 +1240,104 @@ function detectStep(event) {
 
 
 /*
-   핵심 변경점
+   중요:
 
-   이전에는 큰 움직임 4번이면 발동했지만
-   이제는 "큰 움직임 10번"이 누적되어야 한다.
+   devicemotion은 한 번 흔들어도
+   짧은 시간 동안 여러 번 발생한다.
+
+   따라서 센서 이벤트 개수를 세지 않고,
+   실제로 움직임이 시작되고 멈춘 것을
+   하나의 "흔들기"로 취급한다.
 */
+
+
+/* 현재 흔들기 횟수 */
 
 var shakeCount = 0;
 
 
-/*
-   마지막으로 감지한 큰 움직임
-*/
+/* 흔들기 시작 시간 */
 
-var shakeLastMagnitude = null;
+var shakeStartTime = 0;
 
 
-/*
-   마지막 흔들기 기록 시간
-*/
+/* 현재 하나의 흔들기 동작을 처리 중인지 */
+
+var shakeMoving = false;
+
+
+/* 마지막으로 움직임이 감지된 시간 */
 
 var shakeLastTime = 0;
 
 
 /*
-   흔들기 감지 기준
+   마지막으로 감지한 방향
 
-   숫자가 클수록 더 크게 흔들어야 함.
+   1  = 양수 방향
+   -1 = 음수 방향
 */
 
-var shakeThreshold = 4.5;
+var lastShakeDirection = 0;
 
 
 /*
-   흔들기 횟수
+   한 번의 흔들기로 인정할
+   최소 움직임 크기
 
-   10번
+   꽤 크게 흔들어야 한다.
+*/
+
+var shakeThreshold = 6.0;
+
+
+/*
+   실제로 필요한 흔들기 횟수
 */
 
 var shakeRequiredCount = 10;
 
 
 /*
-   흔들기 사이의 최소 시간
+   흔들기 전체 시간
 
-   너무 빠른 센서 노이즈를 방지
+   5초 안에 10번
 */
 
-var shakeMinInterval = 80;
+var shakeWindow = 5000;
 
 
 /*
-   흔들기 카운트를 유지할 최대 시간
-
-   3초 안에 10번 흔들어야 함
+   한 번 크게 움직인 뒤
+   다음 흔들기를 받을 때까지
+   기다리는 시간
 */
 
-var shakeCountWindow = 3000;
+var shakeRestTime = 180;
 
 
 /*
-   흔들기 시작 시간
+   이벤트 발생 후
+   흔들기 이벤트가 다시 시작되기까지
+   필요한 최소 시간
 */
 
-var shakeStartTime = 0;
+var shakeMinInterval = 100;
 
 
 /*
-   흔들기 발동 후 대기 시간
+   흔들기 이벤트 발동 후
+   다시 감지하기까지의 시간
 */
 
 var shakeCooldown = 4000;
+
+
+/*
+   다음 흔들기 이벤트를 받을 수 있는 시간
+*/
+
+var shakeCooldownUntil = 0;
 
 
 /* =================================================
@@ -1322,8 +1358,7 @@ function detectShake(event) {
 
 
     /*
-       다른 특별 대화 중이면
-       흔들기 감지하지 않음
+       일반 대화 상태에서만 감지
     */
 
     if (
@@ -1334,7 +1369,9 @@ function detectShake(event) {
 
         shakeStartTime = 0;
 
-        shakeLastMagnitude = null;
+        shakeMoving = false;
+
+        lastShakeDirection = 0;
 
         return;
 
@@ -1342,8 +1379,8 @@ function detectShake(event) {
 
 
     /*
-       일반 대사가 아직 남아있으면
-       흔들기 감지하지 않음
+       현재 일반 대사가 아직 진행 중이면
+       흔들기 이벤트 금지
     */
 
     var lines =
@@ -1360,7 +1397,9 @@ function detectShake(event) {
 
         shakeStartTime = 0;
 
-        shakeLastMagnitude = null;
+        shakeMoving = false;
+
+        lastShakeDirection = 0;
 
         return;
 
@@ -1378,73 +1417,20 @@ function detectShake(event) {
 
 
     /*
-       현재 움직임 크기
+       현재 시간
     */
-
-    var magnitude =
-        Math.sqrt(
-            x * x +
-            y * y +
-            z * z
-        );
-
-
-    /*
-       최초 값 저장
-    */
-
-    if (
-        shakeLastMagnitude === null
-    ) {
-
-        shakeLastMagnitude =
-            magnitude;
-
-        return;
-
-    }
-
-
-    /*
-       이전 센서값과의 차이
-    */
-
-    var change =
-        Math.abs(
-            magnitude -
-            shakeLastMagnitude
-        );
-
-
-    shakeLastMagnitude =
-        magnitude;
-
-
-    /*
-       큰 움직임이 아니면 무시
-    */
-
-    if (
-        change <
-        shakeThreshold
-    ) {
-
-        return;
-
-    }
-
 
     var now =
         new Date().getTime();
 
 
     /*
-       흔들기 쿨다운
+       흔들기 이벤트 후
+       쿨다운
     */
 
     if (
-        now - lastShakeTime <
-        shakeCooldown
+        now < shakeCooldownUntil
     ) {
 
         return;
@@ -1453,8 +1439,94 @@ function detectShake(event) {
 
 
     /*
-       너무 짧은 시간 안에 들어온
-       센서 변화는 하나로 취급
+       세 축 중 가장 크게 움직이는 축을 사용한다.
+
+       이렇게 하면 폰을 어떤 방향으로 흔들어도
+       어느 정도 감지할 수 있다.
+    */
+
+    var axisValue;
+
+
+    if (
+        Math.abs(x) >= Math.abs(y) &&
+        Math.abs(x) >= Math.abs(z)
+    ) {
+
+        axisValue = x;
+
+    }
+
+    else if (
+        Math.abs(y) >= Math.abs(x) &&
+        Math.abs(y) >= Math.abs(z)
+    ) {
+
+        axisValue = y;
+
+    }
+
+    else {
+
+        axisValue = z;
+
+    }
+
+
+    /*
+       작은 움직임은 전부 무시
+    */
+
+    if (
+        Math.abs(axisValue) <
+        shakeThreshold
+    ) {
+
+        /*
+           현재 움직임이 끝난 뒤
+           다음 흔들기를 받을 준비
+        */
+
+        if (
+            shakeMoving &&
+            now - shakeLastTime >=
+            shakeRestTime
+        ) {
+
+            shakeMoving = false;
+
+        }
+
+        return;
+
+    }
+
+
+    /*
+       움직임이 계속되는 동안에는
+       같은 흔들기로 취급한다.
+
+       이 부분이 핵심이다.
+
+       한 번 크게 흔들었을 때
+       devicemotion이 20번 발생해도
+       shakeCount는 1만 올라간다.
+    */
+
+    if (
+        shakeMoving
+    ) {
+
+        shakeLastTime =
+            now;
+
+        return;
+
+    }
+
+
+    /*
+       너무 빠른 중복 이벤트 방지
     */
 
     if (
@@ -1467,12 +1539,18 @@ function detectShake(event) {
     }
 
 
+    /*
+       새로운 흔들기 시작
+    */
+
+    shakeMoving = true;
+
     shakeLastTime =
         now;
 
 
     /*
-       첫 흔들기
+       흔들기 카운트 시작
     */
 
     if (
@@ -1489,13 +1567,13 @@ function detectShake(event) {
 
 
     /*
-       3초가 지나면
-       흔들기 횟수를 다시 셈
+       5초가 넘었다면
+       다시 처음부터 센다.
     */
 
     if (
         now - shakeStartTime >
-        shakeCountWindow
+        shakeWindow
     ) {
 
         shakeStartTime =
@@ -1508,14 +1586,63 @@ function detectShake(event) {
 
 
     /*
-       큰 움직임 1회 추가
+       현재 방향
     */
 
-    shakeCount++;
+    var direction;
+
+
+    if (
+        axisValue > 0
+    ) {
+
+        direction = 1;
+
+    }
+
+    else {
+
+        direction = -1;
+
+    }
 
 
     /*
-       10번 모이면 발동
+       첫 번째 흔들기
+    */
+
+    if (
+        shakeCount === 0
+    ) {
+
+        shakeCount =
+            1;
+
+        lastShakeDirection =
+            direction;
+
+    }
+
+    /*
+       이전 흔들기와 방향이 달라졌을 때만
+       새로운 흔들기로 인정
+    */
+
+    else if (
+        direction !==
+        lastShakeDirection
+    ) {
+
+        shakeCount++;
+
+        lastShakeDirection =
+            direction;
+
+    }
+
+
+    /*
+       10번의 실제 흔들기 완료
     */
 
     if (
@@ -1527,6 +1654,11 @@ function detectShake(event) {
             now;
 
 
+        shakeCooldownUntil =
+            now +
+            shakeCooldown;
+
+
         shakeCount =
             0;
 
@@ -1535,8 +1667,12 @@ function detectShake(event) {
             0;
 
 
-        shakeLastMagnitude =
-            null;
+        shakeMoving =
+            false;
+
+
+        lastShakeDirection =
+            0;
 
 
         startShakeDialogue();
@@ -1656,6 +1792,10 @@ function handleDialogueClick() {
     unlockAudio();
 
 
+    /*
+       흔들기 대사
+    */
+
     if (
         dialogueMode === "shake"
     ) {
@@ -1667,6 +1807,10 @@ function handleDialogueClick() {
     }
 
 
+    /*
+       idle 대사
+    */
+
     if (
         dialogueMode === "idle"
     ) {
@@ -1677,6 +1821,10 @@ function handleDialogueClick() {
 
     }
 
+
+    /*
+       일반 대사
+    */
 
     if (
         dialogueMode === "normal"
