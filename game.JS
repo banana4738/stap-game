@@ -43,7 +43,7 @@ var shakeLastTime = 0;
 
 
 /*
-   기존에 비교적 잘 되던 흔들기 기준
+   기존 흔들기 기준은 그대로 유지
 */
 
 var shakeWindow = 700;
@@ -65,6 +65,8 @@ var lastStepTime = 0;
    ================================================= */
 
 var audioContext = null;
+
+var audioUnlocked = false;
 
 
 /* =================================================
@@ -388,7 +390,7 @@ function unlockAudio() {
 
         if (!AudioContextClass) {
 
-            return;
+            return Promise.resolve(false);
 
         }
 
@@ -403,9 +405,41 @@ function unlockAudio() {
         "suspended"
     ) {
 
-        audioContext.resume();
+        return audioContext.resume()
+            .then(
+                function() {
+
+                    audioUnlocked = true;
+
+                    return true;
+
+                }
+            )
+            .catch(
+                function() {
+
+                    return false;
+
+                }
+            );
 
     }
+
+
+    audioUnlocked = true;
+
+    return Promise.resolve(true);
+
+}
+
+
+/* =================================================
+   첫 터치에서 오디오 잠금 해제
+   ================================================= */
+
+function prepareAudio() {
+
+    unlockAudio();
 
 }
 
@@ -416,128 +450,139 @@ function unlockAudio() {
 
 function playNotificationSound() {
 
-    unlockAudio();
+    unlockAudio()
+        .then(
+            function(success) {
+
+                if (
+                    !success ||
+                    audioContext === null
+                ) {
+
+                    return;
+
+                }
 
 
-    if (
-        audioContext === null
-    ) {
-
-        return;
-
-    }
+                var now =
+                    audioContext.currentTime;
 
 
-    var now =
-        audioContext.currentTime;
+                /*
+                   첫 번째 띠링
+                */
+
+                var oscillator1 =
+                    audioContext.createOscillator();
+
+                var gain1 =
+                    audioContext.createGain();
 
 
-    /*
-       첫 번째 띠링
-    */
-
-    var oscillator1 =
-        audioContext.createOscillator();
-
-    var gain1 =
-        audioContext.createGain();
+                oscillator1.type =
+                    "sine";
 
 
-    oscillator1.type =
-        "sine";
+                oscillator1.frequency.setValueAtTime(
+                    880,
+                    now
+                );
 
 
-    oscillator1.frequency.setValueAtTime(
-        880,
-        now
-    );
+                gain1.gain.setValueAtTime(
+                    0.0001,
+                    now
+                );
 
 
-    gain1.gain.setValueAtTime(
-        0.0001,
-        now
-    );
+                gain1.gain.exponentialRampToValueAtTime(
+                    0.12,
+                    now + 0.02
+                );
 
 
-    gain1.gain.exponentialRampToValueAtTime(
-        0.12,
-        now + 0.02
-    );
+                gain1.gain.exponentialRampToValueAtTime(
+                    0.0001,
+                    now + 0.25
+                );
 
 
-    gain1.gain.exponentialRampToValueAtTime(
-        0.0001,
-        now + 0.25
-    );
+                oscillator1.connect(
+                    gain1
+                );
+
+                gain1.connect(
+                    audioContext.destination
+                );
 
 
-    oscillator1.connect(gain1);
+                oscillator1.start(
+                    now
+                );
 
-    gain1.connect(
-        audioContext.destination
-    );
-
-
-    oscillator1.start(now);
-
-    oscillator1.stop(
-        now + 0.27
-    );
+                oscillator1.stop(
+                    now + 0.27
+                );
 
 
-    /*
-       두 번째 띠링
-    */
+                /*
+                   두 번째 띠링
+                */
 
-    var oscillator2 =
-        audioContext.createOscillator();
+                var oscillator2 =
+                    audioContext.createOscillator();
 
-    var gain2 =
-        audioContext.createGain();
-
-
-    oscillator2.type =
-        "sine";
+                var gain2 =
+                    audioContext.createGain();
 
 
-    oscillator2.frequency.setValueAtTime(
-        1174,
-        now + 0.16
-    );
+                oscillator2.type =
+                    "sine";
 
 
-    gain2.gain.setValueAtTime(
-        0.0001,
-        now + 0.16
-    );
+                oscillator2.frequency.setValueAtTime(
+                    1174,
+                    now + 0.16
+                );
 
 
-    gain2.gain.exponentialRampToValueAtTime(
-        0.12,
-        now + 0.18
-    );
+                gain2.gain.setValueAtTime(
+                    0.0001,
+                    now + 0.16
+                );
 
 
-    gain2.gain.exponentialRampToValueAtTime(
-        0.0001,
-        now + 0.43
-    );
+                gain2.gain.exponentialRampToValueAtTime(
+                    0.12,
+                    now + 0.18
+                );
 
 
-    oscillator2.connect(gain2);
+                gain2.gain.exponentialRampToValueAtTime(
+                    0.0001,
+                    now + 0.43
+                );
 
-    gain2.connect(
-        audioContext.destination
-    );
+
+                oscillator2.connect(
+                    gain2
+                );
+
+                gain2.connect(
+                    audioContext.destination
+                );
 
 
-    oscillator2.start(
-        now + 0.16
-    );
+                oscillator2.start(
+                    now + 0.16
+                );
 
-    oscillator2.stop(
-        now + 0.45
-    );
+                oscillator2.stop(
+                    now + 0.45
+                );
+
+            }
+        );
 
 }
 
@@ -759,8 +804,8 @@ function startIdleDialogue() {
 
 
     /*
-       오래 가만히 있다가 이벤트가 시작될 때
-       띠링띠링 소리.
+       띠링띠링은
+       idle 이벤트 시작할 때 한 번만.
     */
 
     playNotificationSound();
@@ -838,8 +883,8 @@ function nextIdleDialogue() {
 
 
     /*
-       현재 이벤트에 다음 대사가 있으면
-       한 줄씩 진행.
+       같은 이벤트 안에서
+       다음 대사로 이동.
     */
 
     if (
@@ -857,8 +902,8 @@ function nextIdleDialogue() {
 
 
     /*
-       첫 번째 idle 이벤트가 끝나면
-       두 번째 idle 이벤트로 이동.
+       첫 번째 이벤트가 끝나면
+       두 번째 이벤트의 첫 대사로 이동.
     */
 
     if (
@@ -879,7 +924,7 @@ function nextIdleDialogue() {
 
 
     /*
-       idle 이벤트 전부 종료.
+       모든 idle 이벤트 종료.
     */
 
     dialogueMode =
@@ -925,11 +970,6 @@ function resetIdleTimer() {
 
     }
 
-
-    /*
-       30초 동안 아무것도 하지 않으면
-       idle 이벤트 시작.
-    */
 
     idleTimer =
         setTimeout(
@@ -1086,7 +1126,12 @@ function addSteps(amount) {
 
 
     /*
-       걷기 시작하면 idle 이벤트 종료.
+       idle 대사 중 실제 걸음이 감지되어도
+       현재 대사를 즉시 없애지 않는다.
+
+       단, 실제 걸음 감지로 들어오는 경우에는
+       다음 대화가 자연스럽게 이어지도록
+       idle 상태만 종료한다.
     */
 
     if (
@@ -1429,7 +1474,7 @@ if (
             "click",
             function motionPermission() {
 
-                unlockAudio();
+                prepareAudio();
 
 
                 DeviceMotionEvent
@@ -1479,12 +1524,39 @@ if (
 
 
 /* =================================================
+   첫 터치에서 오디오 준비
+   ================================================= */
+
+document.addEventListener(
+    "click",
+    prepareAudio,
+    {
+        once: true
+    }
+);
+
+
+/* =================================================
    화면 클릭
    ================================================= */
 
-function handleDialogueClick() {
+function handleDialogueClick(event) {
 
-    unlockAudio();
+    /*
+       대화창을 누른 것은
+       걸음 수 증가와 완전히 별개다.
+    */
+
+    if (
+        event
+    ) {
+
+        event.stopPropagation();
+
+    }
+
+
+    prepareAudio();
 
 
     if (
@@ -1530,8 +1602,10 @@ if (
     dialogueBox
 ) {
 
-    dialogueBox.onclick =
-        handleDialogueClick;
+    dialogueBox.addEventListener(
+        "click",
+        handleDialogueClick
+    );
 
 }
 
