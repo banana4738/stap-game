@@ -29,16 +29,85 @@ var lastShakeTime = 0;
    기본 표정 / 대사 알림음
    ================================================= */
 
-var defaultEmotion = 1;
+var defaultEmotion = 5;
+
+
+/*
+   대사 알림음
+*/
 
 var dialogueSound =
     new Audio("sounds/notification.mp3");
 
 dialogueSound.preload = "auto";
 
+var dialogueSoundUnlocked = false;
+
+
+/*
+   브라우저의 소리 재생 제한을 풀기 위해
+   첫 클릭/터치 때 오디오를 한 번 활성화
+*/
+
+function unlockDialogueSound() {
+
+    if (
+        dialogueSoundUnlocked
+    ) {
+
+        return;
+
+    }
+
+    dialogueSound.volume = 0;
+
+    var promise =
+        dialogueSound.play();
+
+    if (
+        promise !== undefined
+    ) {
+
+        promise.then(
+            function() {
+
+                dialogueSound.pause();
+
+                dialogueSound.currentTime = 0;
+
+                dialogueSound.volume = 1;
+
+                dialogueSoundUnlocked = true;
+
+            }
+        ).catch(
+            function(error) {
+
+                console.log(error);
+
+                dialogueSound.volume = 1;
+
+            }
+        );
+
+    }
+
+}
+
+
 function playDialogueSound() {
 
+    if (
+        !dialogueSoundUnlocked
+    ) {
+
+        return;
+
+    }
+
     dialogueSound.currentTime = 0;
+
+    dialogueSound.volume = 1;
 
     dialogueSound.play().catch(
         function(error) {
@@ -359,6 +428,20 @@ function clearIdleTimer() {
 
 
 /* =================================================
+   기본 표정으로 복구
+   ================================================= */
+
+function resetCharacterEmotion() {
+
+    characterImage.src =
+        "images/" +
+        defaultEmotion +
+        ".png";
+
+}
+
+
+/* =================================================
    일반 대화 시작
    ================================================= */
 
@@ -462,18 +545,10 @@ function nextNormalDialogue() {
     }
 
 
-    /*
-       일반 대화가 끝나면
-       기본 표정으로 복구
-    */
-
     dialogueMode =
         "normal";
 
-    characterImage.src =
-        "images/" +
-        defaultEmotion +
-        ".png";
+    resetCharacterEmotion();
 
     resetIdleTimer();
 
@@ -587,16 +662,7 @@ function nextIdleDialogue() {
     idleIndex =
         0;
 
-
-    /*
-       idle 대화가 끝나면
-       기본 표정으로 복구
-    */
-
-    characterImage.src =
-        "images/" +
-        defaultEmotion +
-        ".png";
+    resetCharacterEmotion();
 
 
     if (
@@ -738,16 +804,7 @@ function nextShakeDialogue() {
     shakeDialogueIndex =
         0;
 
-
-    /*
-       흔들기 대화가 끝나면
-       기본 표정으로 복구
-    */
-
-    characterImage.src =
-        "images/" +
-        defaultEmotion +
-        ".png";
+    resetCharacterEmotion();
 
     resetIdleTimer();
 
@@ -790,6 +847,8 @@ function addSteps(amount) {
 
         idleIndex =
             0;
+
+        resetCharacterEmotion();
 
     }
 
@@ -866,6 +925,10 @@ function detectStep(event) {
         new Date().getTime();
 
 
+    /*
+       흔들기 직후에는 걸음 판정을 잠시 막음
+    */
+
     if (
         now - lastShakeTime < 1000
     ) {
@@ -895,17 +958,15 @@ function detectStep(event) {
    ================================================= */
 
 /*
-   완화된 설정
+   흔들기 감지 설정
 
-   살짝 들기       -> 무시
-   걷다가 움직임   -> 대부분 무시
-   한두 번 흔들기  -> 무시
-   여러 번 빠르게 흔들기 -> 발동
+   기존보다 훨씬 쉽게 발동하도록 조정.
 
-   기존보다 감지 조건을 완화함.
+   너무 작은 움직임 -> 무시
+   여러 번 움직임 -> 발동
 */
 
-var shakeLastMagnitude = 0;
+var shakeLastMagnitude = null;
 
 var shakeChangeCount = 0;
 
@@ -913,25 +974,29 @@ var shakeStartTime = 0;
 
 
 /*
-   기존 700ms -> 1000ms
+   움직임을 확인하는 시간
 */
 
-var shakeWindow = 1000;
+var shakeWindow = 1200;
 
 
 /*
-   기존 4.0 -> 2.5
+   한 번의 움직임으로 인정하는 변화량
 */
 
-var shakeChangeThreshold = 2.5;
+var shakeChangeThreshold = 1.8;
 
 
 /*
-   기존 4번 -> 3번
+   필요한 움직임 횟수
 */
 
-var shakeRequiredChanges = 3;
+var shakeRequiredChanges = 2;
 
+
+/*
+   흔들기 감지
+*/
 
 function detectShake(event) {
 
@@ -965,7 +1030,7 @@ function detectShake(event) {
 
 
     /*
-       흔들기 대사 중에는
+       흔들기 대화 중에는
        다시 발동하지 않음
     */
 
@@ -979,36 +1044,11 @@ function detectShake(event) {
 
 
     /*
-       걷고 난 직후에는
-       걸음 동작을 흔들기로 오인하지 않음
-
-       기존 1초 -> 0.5초로 완화
-    */
-
-    if (
-        now - lastStepTime < 500
-    ) {
-
-        shakeLastMagnitude =
-            magnitude;
-
-        shakeChangeCount =
-            0;
-
-        shakeStartTime =
-            0;
-
-        return;
-
-    }
-
-
-    /*
        흔들기 직후 쿨다운
     */
 
     if (
-        now - lastShakeTime < 3000
+        now - lastShakeTime < 2500
     ) {
 
         return;
@@ -1017,11 +1057,11 @@ function detectShake(event) {
 
 
     /*
-       첫 센서값
+       첫 센서값 저장
     */
 
     if (
-        shakeLastMagnitude === 0
+        shakeLastMagnitude === null
     ) {
 
         shakeLastMagnitude =
@@ -1062,7 +1102,7 @@ function detectShake(event) {
 
 
     /*
-       큰 변화 기록
+       첫 번째 큰 움직임
     */
 
     if (
@@ -1074,12 +1114,13 @@ function detectShake(event) {
 
     }
 
+
     shakeChangeCount++;
 
 
     /*
-       짧은 시간에
-       3번 이상 큰 변화가 있어야 함
+       정해진 시간 안에
+       필요한 횟수만큼 움직이면 발동
     */
 
     if (
@@ -1102,7 +1143,7 @@ function detectShake(event) {
                 0;
 
             shakeLastMagnitude =
-                0;
+                null;
 
             startShakeDialogue();
 
@@ -1112,7 +1153,8 @@ function detectShake(event) {
 
 
         /*
-           너무 느리게 흔들었으면 실패
+           너무 느리게 움직였으면
+           다시 처음부터
         */
 
         shakeChangeCount =
@@ -1181,6 +1223,13 @@ if (
             "click",
             function motionPermission() {
 
+                /*
+                   클릭 순간에 오디오도 활성화
+                */
+
+                unlockDialogueSound();
+
+
                 DeviceMotionEvent
                     .requestPermission()
                     .then(
@@ -1216,6 +1265,19 @@ if (
 
     else {
 
+        /*
+           안드로이드 등에서는
+           첫 클릭으로 오디오 활성화
+        */
+
+        document.body.addEventListener(
+            "click",
+            unlockDialogueSound,
+            {
+                once: true
+            }
+        );
+
         startMotionSensor();
 
     }
@@ -1228,6 +1290,13 @@ if (
    ================================================= */
 
 function handleDialogueClick() {
+
+    /*
+       클릭할 때마다 오디오 활성화 시도
+    */
+
+    unlockDialogueSound();
+
 
     if (
         dialogueMode === "shake"
