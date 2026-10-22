@@ -43,7 +43,7 @@ var shakeLastTime = 0;
 
 
 /*
-   이전에 비교적 잘 작동했던 기준
+   기존에 비교적 잘 되던 흔들기 기준
 */
 
 var shakeWindow = 700;
@@ -273,7 +273,7 @@ var dialogues = {
 
 
 /* =================================================
-   idle 대사
+   오래 가만히 있을 때 나오는 대사
    ================================================= */
 
 var idleDialogues = [
@@ -331,7 +331,7 @@ var idleDialogues = [
 
 
 /* =================================================
-   흔들기 대사
+   폰 흔들기 대사
    ================================================= */
 
 var shakeDialogues = [
@@ -411,10 +411,10 @@ function unlockAudio() {
 
 
 /* =================================================
-   딸깍 소리
+   띠링띠링
    ================================================= */
 
-function playClickSound() {
+function playNotificationSound() {
 
     unlockAudio();
 
@@ -432,52 +432,111 @@ function playClickSound() {
         audioContext.currentTime;
 
 
-    var oscillator =
+    /*
+       첫 번째 띠링
+    */
+
+    var oscillator1 =
         audioContext.createOscillator();
 
-    var gain =
+    var gain1 =
         audioContext.createGain();
 
 
-    oscillator.type =
-        "square";
+    oscillator1.type =
+        "sine";
 
 
-    oscillator.frequency.setValueAtTime(
-        1200,
+    oscillator1.frequency.setValueAtTime(
+        880,
         now
     );
 
 
-    gain.gain.setValueAtTime(
+    gain1.gain.setValueAtTime(
         0.0001,
         now
     );
 
 
-    gain.gain.exponentialRampToValueAtTime(
-        0.08,
-        now + 0.005
+    gain1.gain.exponentialRampToValueAtTime(
+        0.12,
+        now + 0.02
     );
 
 
-    gain.gain.exponentialRampToValueAtTime(
+    gain1.gain.exponentialRampToValueAtTime(
         0.0001,
-        now + 0.055
+        now + 0.25
     );
 
 
-    oscillator.connect(gain);
+    oscillator1.connect(gain1);
 
-    gain.connect(
+    gain1.connect(
         audioContext.destination
     );
 
 
-    oscillator.start(now);
+    oscillator1.start(now);
 
-    oscillator.stop(
-        now + 0.06
+    oscillator1.stop(
+        now + 0.27
+    );
+
+
+    /*
+       두 번째 띠링
+    */
+
+    var oscillator2 =
+        audioContext.createOscillator();
+
+    var gain2 =
+        audioContext.createGain();
+
+
+    oscillator2.type =
+        "sine";
+
+
+    oscillator2.frequency.setValueAtTime(
+        1174,
+        now + 0.16
+    );
+
+
+    gain2.gain.setValueAtTime(
+        0.0001,
+        now + 0.16
+    );
+
+
+    gain2.gain.exponentialRampToValueAtTime(
+        0.12,
+        now + 0.18
+    );
+
+
+    gain2.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + 0.43
+    );
+
+
+    oscillator2.connect(gain2);
+
+    gain2.connect(
+        audioContext.destination
+    );
+
+
+    oscillator2.start(
+        now + 0.16
+    );
+
+    oscillator2.stop(
+        now + 0.45
     );
 
 }
@@ -621,9 +680,6 @@ function showNormalDialogue() {
         dialogue.emotion +
         ".png";
 
-
-    playClickSound();
-
 }
 
 
@@ -667,18 +723,13 @@ function nextNormalDialogue() {
     }
 
 
-    /*
-       마지막 일반 대사까지 봤으면
-       idle 타이머 시작.
-    */
-
     resetIdleTimer();
 
 }
 
 
 /* =================================================
-   idle 시작
+   오래 가만히 있기 이벤트 시작
    ================================================= */
 
 function startIdleDialogue() {
@@ -699,8 +750,20 @@ function startIdleDialogue() {
         "idle";
 
 
+    idleGroup =
+        0;
+
+
     idleIndex =
         0;
+
+
+    /*
+       오래 가만히 있다가 이벤트가 시작될 때
+       띠링띠링 소리.
+    */
+
+    playNotificationSound();
 
 
     showIdleDialogue();
@@ -709,7 +772,7 @@ function startIdleDialogue() {
 
 
 /* =================================================
-   idle 표시
+   idle 대사 표시
    ================================================= */
 
 function showIdleDialogue() {
@@ -745,9 +808,6 @@ function showIdleDialogue() {
         dialogue.emotion +
         ".png";
 
-
-    playClickSound();
-
 }
 
 
@@ -779,7 +839,7 @@ function nextIdleDialogue() {
 
     /*
        현재 이벤트에 다음 대사가 있으면
-       한 줄만 넘긴다.
+       한 줄씩 진행.
     */
 
     if (
@@ -797,8 +857,8 @@ function nextIdleDialogue() {
 
 
     /*
-       현재 이벤트가 끝났으면
-       다음 이벤트를 바로 시작한다.
+       첫 번째 idle 이벤트가 끝나면
+       두 번째 idle 이벤트로 이동.
     */
 
     if (
@@ -819,7 +879,7 @@ function nextIdleDialogue() {
 
 
     /*
-       모든 idle 이벤트가 끝남.
+       idle 이벤트 전부 종료.
     */
 
     dialogueMode =
@@ -866,6 +926,11 @@ function resetIdleTimer() {
     }
 
 
+    /*
+       30초 동안 아무것도 하지 않으면
+       idle 이벤트 시작.
+    */
+
     idleTimer =
         setTimeout(
             function() {
@@ -886,13 +951,14 @@ function resetIdleTimer() {
 
 
 /* =================================================
-   흔들기 시작
+   흔들기 이벤트
    ================================================= */
 
 function startShakeDialogue() {
 
     /*
-       idle 중에는 끼어들지 않는다.
+       idle 이벤트 중에는
+       흔들기로 끼어들지 않는다.
     */
 
     if (
@@ -921,7 +987,7 @@ function startShakeDialogue() {
 
 
 /* =================================================
-   흔들기 표시
+   흔들기 대사 표시
    ================================================= */
 
 function showShakeDialogue() {
@@ -947,9 +1013,6 @@ function showShakeDialogue() {
         "images/" +
         dialogue.emotion +
         ".png";
-
-
-    playClickSound();
 
 }
 
@@ -1037,19 +1100,8 @@ function addSteps(amount) {
         idleIndex =
             0;
 
-    }
-
-
-    /*
-       흔들기 이벤트 중에는
-       걸음 때문에 다른 대사가 끼지 않게 한다.
-    */
-
-    if (
-        dialogueMode !== "shake"
-    ) {
-
-        resetIdleTimer();
+        idleGroup =
+            0;
 
     }
 
@@ -1069,6 +1121,9 @@ function addSteps(amount) {
         return;
 
     }
+
+
+    resetIdleTimer();
 
 }
 
@@ -1154,11 +1209,6 @@ function detectShake(event) {
     }
 
 
-    /*
-       대화 이벤트 중에는
-       흔들기를 새로 발동하지 않는다.
-    */
-
     if (
         dialogueMode === "shake"
     ) {
@@ -1200,8 +1250,8 @@ function detectShake(event) {
 
 
     /*
-       걸음으로 인식된 직후에는
-       같은 움직임을 흔들기로 세지 않는다.
+       걸음으로 잡힌 직후에는
+       같은 움직임을 흔들기로 판단하지 않음.
     */
 
     if (
@@ -1223,10 +1273,6 @@ function detectShake(event) {
     }
 
 
-    /*
-       흔들기 이벤트 직후 쿨다운.
-    */
-
     if (
         now - shakeLastTime <
         3000
@@ -1236,10 +1282,6 @@ function detectShake(event) {
 
     }
 
-
-    /*
-       첫 값 저장.
-    */
 
     if (
         shakeLastMagnitude === 0
@@ -1253,10 +1295,6 @@ function detectShake(event) {
     }
 
 
-    /*
-       이전 값과 현재 값의 차이.
-    */
-
     var change =
         Math.abs(
             magnitude -
@@ -1268,10 +1306,6 @@ function detectShake(event) {
         magnitude;
 
 
-    /*
-       작은 변화 무시.
-    */
-
     if (
         change <
         shakeChangeThreshold
@@ -1281,10 +1315,6 @@ function detectShake(event) {
 
     }
 
-
-    /*
-       첫 번째 큰 변화.
-    */
 
     if (
         shakeChangeCount === 0
@@ -1298,10 +1328,6 @@ function detectShake(event) {
 
     shakeChangeCount++;
 
-
-    /*
-       4번 변화가 700ms 안에 들어오면 발동.
-    */
 
     if (
         shakeChangeCount >=
@@ -1337,11 +1363,6 @@ function detectShake(event) {
         }
 
 
-        /*
-           너무 느리게 흔들었으면
-           다시 시작.
-        */
-
         shakeChangeCount =
             0;
 
@@ -1351,10 +1372,6 @@ function detectShake(event) {
 
     }
 
-
-    /*
-       시간 초과.
-    */
 
     if (
         shakeChangeCount > 0 &&
