@@ -42,15 +42,11 @@ var shakeStartTime = 0;
 var shakeLastTime = 0;
 
 
-/*
-   약 10번 정도 크게 흔들었을 때 발동
-*/
+var shakeWindow = 700;
 
-var shakeWindow = 3000;
+var shakeChangeThreshold = 4.0;
 
-var shakeChangeThreshold = 3.2;
-
-var shakeRequiredChanges = 10;
+var shakeRequiredChanges = 4;
 
 
 /* =================================================
@@ -827,14 +823,9 @@ function nextIdleDialogue() {
     }
 
 
-    /*
-       현재 그룹에 다음 대사가 있으면
-       다음 대사로 이동
-    */
-
     if (
-        idleIndex + 1 <
-        group.length
+        idleIndex <
+        group.length - 1
     ) {
 
         idleIndex++;
@@ -843,10 +834,8 @@ function nextIdleDialogue() {
 
 
         /*
-           첫 번째 idle 이벤트의
-           마지막 대사인
-           "곁에 있을테니까." 뒤에서
-           30초 대기
+           "곁에 있을테니까."가 나온 뒤
+           30초 동안 기다린다.
         */
 
         if (
@@ -903,11 +892,6 @@ function nextIdleDialogue() {
 
     }
 
-
-    /*
-       현재 idle 그룹의 마지막 대사까지
-       모두 본 경우
-    */
 
     dialogueMode =
         "normal";
@@ -1212,11 +1196,11 @@ function detectStep(event) {
 
 
     /*
-       기존보다 조금 더 예민하게 판정
+       기존보다 널널하게 판정
     */
 
     if (
-        movement > 1.4
+        movement > 1.7
     ) {
 
         lastStepTime =
@@ -1312,11 +1296,6 @@ function detectShake(event) {
     }
 
 
-    /*
-       흔들기 이벤트 직후
-       3초 동안 재발동하지 않음.
-    */
-
     if (
         now - shakeLastTime <
         3000
@@ -1326,10 +1305,6 @@ function detectShake(event) {
 
     }
 
-
-    /*
-       첫 센서값 저장
-    */
 
     if (
         shakeLastMagnitude === 0
@@ -1343,10 +1318,6 @@ function detectShake(event) {
     }
 
 
-    /*
-       이전 센서값과 현재 센서값의 차이
-    */
-
     var change =
         Math.abs(
             magnitude -
@@ -1358,10 +1329,6 @@ function detectShake(event) {
         magnitude;
 
 
-    /*
-       작은 움직임은 무시
-    */
-
     if (
         change <
         shakeChangeThreshold
@@ -1371,10 +1338,6 @@ function detectShake(event) {
 
     }
 
-
-    /*
-       큰 움직임 하나 기록
-    */
 
     if (
         shakeChangeCount === 0
@@ -1388,11 +1351,6 @@ function detectShake(event) {
 
     shakeChangeCount++;
 
-
-    /*
-       약 10번의 큰 움직임이
-       3초 안에 들어오면 발동
-    */
 
     if (
         shakeChangeCount >=
@@ -1428,11 +1386,6 @@ function detectShake(event) {
         }
 
 
-        /*
-           너무 천천히 흔들었다면
-           다시 처음부터 센다.
-        */
-
         shakeChangeCount =
             0;
 
@@ -1442,10 +1395,6 @@ function detectShake(event) {
 
     }
 
-
-    /*
-       너무 오래 걸렸으면 초기화
-    */
 
     if (
         shakeChangeCount > 0 &&
@@ -1657,4 +1606,4 @@ updateStepDisplay();
 
 startDialogue(0);
 
-resetIdleTimer();
+resetIdleTimer(); 
