@@ -619,6 +619,25 @@ function startIdleDialogue() {
 
     }
 
+
+    var group =
+        idleDialogues[idleGroup];
+
+    /*
+       모든 idle 그룹을 사용했다면
+       다시 첫 번째 그룹으로 돌아감
+    */
+
+    if (!group) {
+
+        idleGroup = 0;
+
+        group =
+            idleDialogues[idleGroup];
+
+    }
+
+
     clearIdleTimer();
 
     dialogueMode =
@@ -694,6 +713,11 @@ function nextIdleDialogue() {
     }
 
 
+    /*
+       아직 현재 idle 대사가 남아 있다면
+       다음 문장으로 이동
+    */
+
     if (
         idleIndex <
         group.length - 1
@@ -709,8 +733,7 @@ function nextIdleDialogue() {
 
 
     /*
-       idle 대사가 끝나면
-       반드시 기본 표정 5번으로 복구
+       현재 idle 그룹의 대사가 전부 끝남
     */
 
     dialogueMode =
@@ -723,18 +746,30 @@ function nextIdleDialogue() {
 
 
     /*
-       다음 idle 대사 그룹을 준비
+       다음 idle 그룹으로 이동
+    */
+
+    idleGroup++;
+
+    /*
+       마지막 그룹까지 갔다면
+       다시 첫 번째 그룹으로 순환
     */
 
     if (
-        idleGroup <
-        idleDialogues.length - 1
+        idleGroup >=
+        idleDialogues.length
     ) {
 
-        idleGroup++;
+        idleGroup = 0;
 
     }
 
+
+    /*
+       대사가 끝난 시점부터
+       다시 40초 기다림
+    */
 
     resetIdleTimer();
 
@@ -807,6 +842,10 @@ function addSteps(amount) {
 
     updateStepDisplay();
 
+
+    /*
+       걷기 시작하면 idle 대화를 종료
+    */
 
     if (
         dialogueMode === "idle"
@@ -884,17 +923,16 @@ function detectStep(event) {
 
 
     /*
-       기존보다 조금 널널하게
-       걸음 판정을 잡음.
+       실제 걸음 감지
 
-       휴대폰을 실제로 들고 걸을 때
-       움직임이 약해도 걸음으로 인식할 수 있도록
-       기준을 11 -> 10.3으로 낮춤.
+       너무 민감하게 잡히지 않도록
+       기존 기준을 사용하고
+       중복 판정 간격만 조금 늘림.
     */
 
     if (
-        magnitude > 10.3 &&
-        now - lastStepTime > 300
+        magnitude > 11 &&
+        now - lastStepTime > 400
     ) {
 
         lastStepTime =
@@ -941,10 +979,6 @@ function registerStepPattern() {
     );
 
 
-    /*
-       너무 오래된 기록 제거
-    */
-
     recentStepTimes =
         recentStepTimes.filter(
             function(time) {
@@ -981,12 +1015,6 @@ function isWalking() {
             }
         );
 
-
-    /*
-       최근 1.8초 안에
-       걸음이 2번 이상 있으면
-       걷는 중으로 판단
-    */
 
     return (
         recentStepTimes.length >= 2
