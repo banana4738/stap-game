@@ -15,14 +15,11 @@ var currentDialogueIndex = 0;
 var dialogueMode = "normal";
 
 var idleTimer = null;
+
+var idleRound = 0;
 var idleIndex = 0;
 
 var lastStepTime = 0;
-
-
-/* =================================================
-   기본 표정
-   ================================================= */
 
 var defaultEmotion = 5;
 
@@ -36,9 +33,7 @@ var audioContext = null;
 
 function unlockAudio() {
 
-    if (
-        audioContext === null
-    ) {
+    if (audioContext === null) {
 
         var AudioContext =
             window.AudioContext ||
@@ -57,7 +52,8 @@ function unlockAudio() {
 
 
     if (
-        audioContext.state === "suspended"
+        audioContext.state ===
+        "suspended"
     ) {
 
         audioContext.resume();
@@ -69,9 +65,7 @@ function unlockAudio() {
 
 function playDialogueSound() {
 
-    if (
-        audioContext === null
-    ) {
+    if (audioContext === null) {
 
         return;
 
@@ -79,7 +73,8 @@ function playDialogueSound() {
 
 
     if (
-        audioContext.state === "suspended"
+        audioContext.state ===
+        "suspended"
     ) {
 
         audioContext.resume();
@@ -124,6 +119,7 @@ function playDialogueSound() {
 
 
     oscillator1.connect(gain1);
+
     gain1.connect(
         audioContext.destination
     );
@@ -169,6 +165,7 @@ function playDialogueSound() {
 
 
     oscillator2.connect(gain2);
+
     gain2.connect(
         audioContext.destination
     );
@@ -200,9 +197,6 @@ var characterImage =
 
 var dialogueBox =
     document.getElementById("dialogueBox");
-
-var characterArea =
-    document.getElementById("characterArea");
 
 
 /* =================================================
@@ -351,28 +345,34 @@ var dialogues = {
 
 
 /* =================================================
-   idle 대사
+   첫 번째 idle 대사
    ================================================= */
 
-/*
-   idle 대사는 하나의 배열로 처리한다.
+var idleFirstDialogues = [
 
-   40초 후
-   ↓
-   1
-   ↓
-   2
-   ↓
-   3
-   ↓
-   4
-   ↓
-   5
-   ↓
-   종료
-*/
+    {
+        text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
+        emotion: 1
+    },
 
-var idleDialogues = [
+    {
+        text: "내가 계속 응원... 아니, 응원이라고 해야하나.",
+        emotion: 3
+    },
+
+    {
+        text: "곁에 있을테니까.",
+        emotion: 5
+    }
+
+];
+
+
+/* =================================================
+   두 번째 idle 대사
+   ================================================= */
+
+var idleSecondDialogues = [
 
     {
         text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
@@ -480,7 +480,7 @@ function clearIdleTimer() {
 
 
 /* =================================================
-   기본 표정
+   기본 표정 5번
    ================================================= */
 
 function resetCharacterEmotion() {
@@ -572,7 +572,7 @@ function showNormalDialogue() {
 
 
 /* =================================================
-   일반 대사 넘기기
+   일반 대사 다음
    ================================================= */
 
 function nextNormalDialogue() {
@@ -612,15 +612,15 @@ function nextNormalDialogue() {
 
 
     /*
-       일반 대사가 끝남.
-       기본 표정 5번으로 복구.
+       일반 대사가 끝났으므로
+       기본 표정으로 돌아간다.
     */
 
     resetCharacterEmotion();
 
 
     /*
-       여기서부터 40초 대기.
+       40초 대기 시작.
     */
 
     resetIdleTimer();
@@ -633,10 +633,6 @@ function nextNormalDialogue() {
    ================================================= */
 
 function startIdleDialogue() {
-
-    /*
-       만보 달성 후에는 idle 대사를 띄우지 않음.
-    */
 
     if (
         steps >= 10000
@@ -654,11 +650,35 @@ function startIdleDialogue() {
         "idle";
 
 
-    idleIndex =
-        0;
+    /*
+       항상 현재 idle 회차의
+       첫 번째 대사부터 시작.
+    */
+
+    idleIndex = 0;
 
 
     showIdleDialogue();
+
+}
+
+
+/* =================================================
+   현재 idle 대사 가져오기
+   ================================================= */
+
+function getCurrentIdleLines() {
+
+    if (
+        idleRound === 0
+    ) {
+
+        return idleFirstDialogues;
+
+    }
+
+
+    return idleSecondDialogues;
 
 }
 
@@ -669,8 +689,12 @@ function startIdleDialogue() {
 
 function showIdleDialogue() {
 
+    var lines =
+        getCurrentIdleLines();
+
+
     var dialogue =
-        idleDialogues[idleIndex];
+        lines[idleIndex];
 
 
     if (!dialogue) {
@@ -696,14 +720,10 @@ function showIdleDialogue() {
 
 
 /* =================================================
-   idle 대사 넘기기
+   idle 대사 다음
    ================================================= */
 
 function nextIdleDialogue() {
-
-    /*
-       idle 상태가 아니면 아무것도 하지 않음.
-    */
 
     if (
         dialogueMode !== "idle"
@@ -714,22 +734,23 @@ function nextIdleDialogue() {
     }
 
 
+    var lines =
+        getCurrentIdleLines();
+
+
     /*
-       아직 다음 대사가 있으면
-       무조건 다음 한 줄로 이동.
+       다음 대사가 남아 있으면
+       딱 한 칸만 이동.
     */
 
     if (
         idleIndex <
-        idleDialogues.length - 1
+        lines.length - 1
     ) {
 
-        idleIndex =
-            idleIndex + 1;
-
+        idleIndex++;
 
         showIdleDialogue();
-
 
         return;
 
@@ -737,7 +758,8 @@ function nextIdleDialogue() {
 
 
     /*
-       마지막 대사까지 끝남.
+       여기까지 왔으면
+       현재 idle 대사가 전부 끝난 것.
     */
 
     dialogueMode =
@@ -749,15 +771,53 @@ function nextIdleDialogue() {
 
 
     /*
-       마지막 대사 뒤에는
-       반드시 기본 표정 5번.
+       두 번째 idle의 마지막 대사가
+       "일어나!"이므로 여기서 진동.
+    */
+
+    if (
+        idleRound === 1
+    ) {
+
+        if (
+            navigator.vibrate
+        ) {
+
+            navigator.vibrate([
+                150,
+                100,
+                150,
+                100,
+                150
+            ]);
+
+        }
+
+    }
+
+
+    /*
+       기본 표정 5번으로 복귀.
     */
 
     resetCharacterEmotion();
 
 
     /*
-       마지막 대사를 본 순간부터
+       첫 번째 idle을 끝냈다면
+       다음 idle은 두 번째 회차.
+    */
+
+    if (
+        idleRound === 0
+    ) {
+
+        idleRound = 1;
+
+    }
+
+
+    /*
        다시 40초 대기.
     */
 
@@ -776,7 +836,7 @@ function resetIdleTimer() {
 
 
     /*
-       만보 달성 후에는 타이머 자체를 만들지 않음.
+       만보 이후에는 idle 대사 없음.
     */
 
     if (
@@ -789,8 +849,8 @@ function resetIdleTimer() {
 
 
     /*
-       현재 idle 대화 중이면
-       새 타이머를 만들지 않음.
+       idle 대화 중에는
+       타이머를 새로 만들지 않는다.
     */
 
     if (
@@ -801,10 +861,6 @@ function resetIdleTimer() {
 
     }
 
-
-    /*
-       40초 후 idle 대사 시작.
-    */
 
     idleTimer =
         setTimeout(
@@ -853,8 +909,8 @@ function addSteps(amount) {
 
 
     /*
-       idle 대화 중 실제로 걸으면
-       idle 대사를 종료.
+       idle 대화 중 걸으면
+       idle 대사를 종료한다.
     */
 
     if (
@@ -882,8 +938,8 @@ function addSteps(amount) {
 
 
     /*
-       새로운 마일스톤에 도달했으면
-       해당 대사를 보여준다.
+       새로운 마일스톤에 도달한 경우
+       해당 마일스톤 대사를 실행한다.
     */
 
     if (
@@ -893,8 +949,6 @@ function addSteps(amount) {
         startDialogue(
             newMilestone
         );
-
-        resetIdleTimer();
 
     }
 
@@ -941,10 +995,7 @@ function detectStep(event) {
 
 
     /*
-       걸음 감지
-
-       기준값: 11
-       중복 방지: 400ms
+       걸음 감지 기준
     */
 
     if (
@@ -982,7 +1033,8 @@ function startMotionSensor() {
    ================================================= */
 
 if (
-    typeof DeviceMotionEvent !== "undefined"
+    typeof DeviceMotionEvent !==
+    "undefined"
 ) {
 
     if (
@@ -1003,7 +1055,8 @@ if (
                         function(permission) {
 
                             if (
-                                permission === "granted"
+                                permission ===
+                                "granted"
                             ) {
 
                                 startMotionSensor();
@@ -1050,39 +1103,6 @@ if (
 
 
 /* =================================================
-   화면 클릭
-   ================================================= */
-
-function handleDialogueClick() {
-
-    unlockAudio();
-
-
-    if (
-        dialogueMode === "idle"
-    ) {
-
-        nextIdleDialogue();
-
-        return;
-
-    }
-
-
-    if (
-        dialogueMode === "normal"
-    ) {
-
-        nextNormalDialogue();
-
-        return;
-
-    }
-
-}
-
-
-/* =================================================
    대화창 클릭
    ================================================= */
 
@@ -1091,21 +1111,33 @@ if (
 ) {
 
     dialogueBox.onclick =
-        handleDialogueClick;
+        function() {
 
-}
+            unlockAudio();
 
 
-/* =================================================
-   캐릭터 클릭
-   ================================================= */
+            if (
+                dialogueMode === "idle"
+            ) {
 
-if (
-    characterArea
-) {
+                nextIdleDialogue();
 
-    characterArea.onclick =
-        handleDialogueClick;
+                return;
+
+            }
+
+
+            if (
+                dialogueMode === "normal"
+            ) {
+
+                nextNormalDialogue();
+
+                return;
+
+            }
+
+        };
 
 }
 
