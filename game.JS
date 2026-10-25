@@ -367,7 +367,7 @@ var milestones = [
 
 
 /* =================================================
-   40초 후 대사
+   idle 대사
    ================================================= */
 
 var idleDialogues = [
@@ -595,7 +595,7 @@ function nextNormalDialogue() {
 
     /*
        일반 대사가 끝나면
-       반드시 기본 표정 5번으로 복구
+       기본 표정 5번으로 복구
     */
 
     resetCharacterEmotion();
@@ -616,24 +616,6 @@ function startIdleDialogue() {
     ) {
 
         return;
-
-    }
-
-
-    var group =
-        idleDialogues[idleGroup];
-
-    /*
-       모든 idle 그룹을 사용했다면
-       다시 첫 번째 그룹으로 돌아감
-    */
-
-    if (!group) {
-
-        idleGroup = 0;
-
-        group =
-            idleDialogues[idleGroup];
 
     }
 
@@ -662,9 +644,13 @@ function showIdleDialogue() {
 
     if (!group) {
 
-        return;
+        idleGroup = 0;
+
+        group =
+            idleDialogues[idleGroup];
 
     }
+
 
     var dialogue =
         group[idleIndex];
@@ -674,6 +660,7 @@ function showIdleDialogue() {
         return;
 
     }
+
 
     messageElement.textContent =
         dialogue.text;
@@ -714,16 +701,17 @@ function nextIdleDialogue() {
 
 
     /*
-       아직 현재 idle 대사가 남아 있다면
-       다음 문장으로 이동
+       현재 그룹의 다음 대사가 있다면
+       무조건 한 줄만 넘김
     */
 
     if (
-        idleIndex <
-        group.length - 1
+        idleIndex + 1 <
+        group.length
     ) {
 
-        idleIndex++;
+        idleIndex =
+            idleIndex + 1;
 
         showIdleDialogue();
 
@@ -733,7 +721,7 @@ function nextIdleDialogue() {
 
 
     /*
-       현재 idle 그룹의 대사가 전부 끝남
+       현재 idle 그룹의 마지막 대사까지 봄
     */
 
     dialogueMode =
@@ -742,19 +730,14 @@ function nextIdleDialogue() {
     idleIndex =
         0;
 
-    resetCharacterEmotion();
-
 
     /*
-       다음 idle 그룹으로 이동
+       다음 idle 그룹 준비
     */
 
-    idleGroup++;
+    idleGroup =
+        idleGroup + 1;
 
-    /*
-       마지막 그룹까지 갔다면
-       다시 첫 번째 그룹으로 순환
-    */
 
     if (
         idleGroup >=
@@ -767,8 +750,16 @@ function nextIdleDialogue() {
 
 
     /*
-       대사가 끝난 시점부터
-       다시 40초 기다림
+       마지막 대사 뒤에는
+       5번 표정으로 복귀
+    */
+
+    resetCharacterEmotion();
+
+
+    /*
+       마지막 대사를 본 시점부터
+       다시 40초 대기
     */
 
     resetIdleTimer();
@@ -784,6 +775,7 @@ function resetIdleTimer() {
 
     clearIdleTimer();
 
+
     if (
         steps >= 10000
     ) {
@@ -791,6 +783,7 @@ function resetIdleTimer() {
         return;
 
     }
+
 
     if (
         dialogueMode !== "normal"
@@ -806,7 +799,8 @@ function resetIdleTimer() {
             function() {
 
                 if (
-                    dialogueMode === "normal"
+                    dialogueMode === "normal" &&
+                    steps < 10000
                 ) {
 
                     startIdleDialogue();
@@ -829,7 +823,9 @@ function addSteps(amount) {
     var oldMilestone =
         getCurrentMilestone();
 
+
     steps += amount;
+
 
     if (
         steps > 10000
@@ -840,11 +836,13 @@ function addSteps(amount) {
 
     }
 
+
     updateStepDisplay();
 
 
     /*
-       걷기 시작하면 idle 대화를 종료
+       idle 대화 중 걸으면
+       idle 대화를 종료
     */
 
     if (
@@ -923,11 +921,10 @@ function detectStep(event) {
 
 
     /*
-       실제 걸음 감지
+       걸음 감지 기준
 
-       너무 민감하게 잡히지 않도록
-       기존 기준을 사용하고
-       중복 판정 간격만 조금 늘림.
+       기준값: 11
+       중복 판정 방지: 400ms
     */
 
     if (
@@ -943,101 +940,6 @@ function detectStep(event) {
     }
 
 }
-
-
-/* =================================================
-   걷기 패턴 분석
-   ================================================= */
-
-
-/*
-   최근 걸음이 발생한 시간들
-*/
-
-var recentStepTimes = [];
-
-
-/*
-   걷고 있다고 판단할 시간
-*/
-
-var walkingTimeout = 1800;
-
-
-/*
-   최근 걸음 기록
-*/
-
-function registerStepPattern() {
-
-    var now =
-        new Date().getTime();
-
-
-    recentStepTimes.push(
-        now
-    );
-
-
-    recentStepTimes =
-        recentStepTimes.filter(
-            function(time) {
-
-                return (
-                    now - time <= 2500
-                );
-
-            }
-        );
-
-}
-
-
-/*
-   현재 걷는 중인지 확인
-*/
-
-function isWalking() {
-
-    var now =
-        new Date().getTime();
-
-
-    recentStepTimes =
-        recentStepTimes.filter(
-            function(time) {
-
-                return (
-                    now - time <=
-                    walkingTimeout
-                );
-
-            }
-        );
-
-
-    return (
-        recentStepTimes.length >= 2
-    );
-
-}
-
-
-/* =================================================
-   걸음 감지에 패턴 기록 추가
-   ================================================= */
-
-var originalAddSteps =
-    addSteps;
-
-addSteps =
-    function(amount) {
-
-        registerStepPattern();
-
-        originalAddSteps(amount);
-
-    };
 
 
 /* =================================================
