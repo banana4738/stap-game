@@ -15,8 +15,6 @@ var currentDialogueIndex = 0;
 var dialogueMode = "normal";
 
 var idleTimer = null;
-
-var idleGroup = 0;
 var idleIndex = 0;
 
 var lastStepTime = 0;
@@ -59,8 +57,7 @@ function unlockAudio() {
 
 
     if (
-        audioContext.state ===
-        "suspended"
+        audioContext.state === "suspended"
     ) {
 
         audioContext.resume();
@@ -82,8 +79,7 @@ function playDialogueSound() {
 
 
     if (
-        audioContext.state ===
-        "suspended"
+        audioContext.state === "suspended"
     ) {
 
         audioContext.resume();
@@ -128,7 +124,6 @@ function playDialogueSound() {
 
 
     oscillator1.connect(gain1);
-
     gain1.connect(
         audioContext.destination
     );
@@ -174,7 +169,6 @@ function playDialogueSound() {
 
 
     oscillator2.connect(gain2);
-
     gain2.connect(
         audioContext.destination
     );
@@ -203,6 +197,12 @@ var messageElement =
 
 var characterImage =
     document.getElementById("characterImage");
+
+var dialogueBox =
+    document.getElementById("dialogueBox");
+
+var characterArea =
+    document.getElementById("characterArea");
 
 
 /* =================================================
@@ -351,6 +351,58 @@ var dialogues = {
 
 
 /* =================================================
+   idle 대사
+   ================================================= */
+
+/*
+   idle 대사는 하나의 배열로 처리한다.
+
+   40초 후
+   ↓
+   1
+   ↓
+   2
+   ↓
+   3
+   ↓
+   4
+   ↓
+   5
+   ↓
+   종료
+*/
+
+var idleDialogues = [
+
+    {
+        text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
+        emotion: 1
+    },
+
+    {
+        text: "...",
+        emotion: 7
+    },
+
+    {
+        text: "감독생? 나 그런 거 안 봐주거든.",
+        emotion: 4
+    },
+
+    {
+        text: "내가 이런 거에선 좀 깐깐해서 말이야.",
+        emotion: 3
+    },
+
+    {
+        text: "일어나!",
+        emotion: 4
+    }
+
+];
+
+
+/* =================================================
    마일스톤
    ================================================= */
 
@@ -363,53 +415,6 @@ var milestones = [
     2500,
     5000,
     10000
-];
-
-
-/* =================================================
-   idle 대사
-   ================================================= */
-
-var idleDialogues = [
-
-    [
-        {
-            text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
-            emotion: 1
-        },
-        {
-            text: "내가 계속 응원... 아니, 응원이라고 해야하나.",
-            emotion: 7
-        },
-        {
-            text: "곁에 있을테니까.",
-            emotion: 5
-        }
-    ],
-
-    [
-        {
-            text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
-            emotion: 1
-        },
-        {
-            text: "...",
-            emotion: 7
-        },
-        {
-            text: "감독생? 나 그런 거 안 봐주거든.",
-            emotion: 4
-        },
-        {
-            text: "내가 이런 거에선 좀 깐깐해서 말이야.",
-            emotion: 3
-        },
-        {
-            text: "일어나!",
-            emotion: 4
-        }
-    ]
-
 ];
 
 
@@ -475,7 +480,7 @@ function clearIdleTimer() {
 
 
 /* =================================================
-   기본 표정으로 복구
+   기본 표정
    ================================================= */
 
 function resetCharacterEmotion() {
@@ -502,16 +507,21 @@ function startDialogue(step) {
 
     }
 
+
     clearIdleTimer();
+
 
     dialogueMode =
         "normal";
 
+
     currentStep =
         step;
 
+
     currentDialogueIndex =
         0;
+
 
     showNormalDialogue();
 
@@ -527,14 +537,17 @@ function showNormalDialogue() {
     var lines =
         dialogues[currentStep];
 
+
     if (!lines) {
 
         return;
 
     }
 
+
     var dialogue =
         lines[currentDialogueIndex];
+
 
     if (!dialogue) {
 
@@ -542,13 +555,16 @@ function showNormalDialogue() {
 
     }
 
+
     messageElement.textContent =
         dialogue.text;
+
 
     characterImage.src =
         "images/" +
         dialogue.emotion +
         ".png";
+
 
     playDialogueSound();
 
@@ -556,7 +572,7 @@ function showNormalDialogue() {
 
 
 /* =================================================
-   일반 대사 클릭
+   일반 대사 넘기기
    ================================================= */
 
 function nextNormalDialogue() {
@@ -569,8 +585,10 @@ function nextNormalDialogue() {
 
     }
 
+
     var lines =
         dialogues[currentStep];
+
 
     if (!lines) {
 
@@ -594,11 +612,16 @@ function nextNormalDialogue() {
 
 
     /*
-       일반 대사가 끝나면
-       기본 표정 5번으로 복구
+       일반 대사가 끝남.
+       기본 표정 5번으로 복구.
     */
 
     resetCharacterEmotion();
+
+
+    /*
+       여기서부터 40초 대기.
+    */
 
     resetIdleTimer();
 
@@ -611,6 +634,10 @@ function nextNormalDialogue() {
 
 function startIdleDialogue() {
 
+    /*
+       만보 달성 후에는 idle 대사를 띄우지 않음.
+    */
+
     if (
         steps >= 10000
     ) {
@@ -622,11 +649,14 @@ function startIdleDialogue() {
 
     clearIdleTimer();
 
+
     dialogueMode =
         "idle";
 
+
     idleIndex =
         0;
+
 
     showIdleDialogue();
 
@@ -639,21 +669,9 @@ function startIdleDialogue() {
 
 function showIdleDialogue() {
 
-    var group =
-        idleDialogues[idleGroup];
-
-    if (!group) {
-
-        idleGroup = 0;
-
-        group =
-            idleDialogues[idleGroup];
-
-    }
-
-
     var dialogue =
-        group[idleIndex];
+        idleDialogues[idleIndex];
+
 
     if (!dialogue) {
 
@@ -665,10 +683,12 @@ function showIdleDialogue() {
     messageElement.textContent =
         dialogue.text;
 
+
     characterImage.src =
         "images/" +
         dialogue.emotion +
         ".png";
+
 
     playDialogueSound();
 
@@ -676,10 +696,14 @@ function showIdleDialogue() {
 
 
 /* =================================================
-   idle 대사 클릭
+   idle 대사 넘기기
    ================================================= */
 
 function nextIdleDialogue() {
+
+    /*
+       idle 상태가 아니면 아무것도 하지 않음.
+    */
 
     if (
         dialogueMode !== "idle"
@@ -690,30 +714,22 @@ function nextIdleDialogue() {
     }
 
 
-    var group =
-        idleDialogues[idleGroup];
-
-    if (!group) {
-
-        return;
-
-    }
-
-
     /*
-       현재 그룹의 다음 대사가 있다면
-       무조건 한 줄만 넘김
+       아직 다음 대사가 있으면
+       무조건 다음 한 줄로 이동.
     */
 
     if (
-        idleIndex + 1 <
-        group.length
+        idleIndex <
+        idleDialogues.length - 1
     ) {
 
         idleIndex =
             idleIndex + 1;
 
+
         showIdleDialogue();
+
 
         return;
 
@@ -721,45 +737,28 @@ function nextIdleDialogue() {
 
 
     /*
-       현재 idle 그룹의 마지막 대사까지 봄
+       마지막 대사까지 끝남.
     */
 
     dialogueMode =
         "normal";
+
 
     idleIndex =
         0;
 
 
     /*
-       다음 idle 그룹 준비
-    */
-
-    idleGroup =
-        idleGroup + 1;
-
-
-    if (
-        idleGroup >=
-        idleDialogues.length
-    ) {
-
-        idleGroup = 0;
-
-    }
-
-
-    /*
        마지막 대사 뒤에는
-       5번 표정으로 복귀
+       반드시 기본 표정 5번.
     */
 
     resetCharacterEmotion();
 
 
     /*
-       마지막 대사를 본 시점부터
-       다시 40초 대기
+       마지막 대사를 본 순간부터
+       다시 40초 대기.
     */
 
     resetIdleTimer();
@@ -768,13 +767,17 @@ function nextIdleDialogue() {
 
 
 /* =================================================
-   idle 40초 타이머
+   40초 idle 타이머
    ================================================= */
 
 function resetIdleTimer() {
 
     clearIdleTimer();
 
+
+    /*
+       만보 달성 후에는 타이머 자체를 만들지 않음.
+    */
 
     if (
         steps >= 10000
@@ -785,14 +788,23 @@ function resetIdleTimer() {
     }
 
 
+    /*
+       현재 idle 대화 중이면
+       새 타이머를 만들지 않음.
+    */
+
     if (
-        dialogueMode !== "normal"
+        dialogueMode === "idle"
     ) {
 
         return;
 
     }
 
+
+    /*
+       40초 후 idle 대사 시작.
+    */
 
     idleTimer =
         setTimeout(
@@ -841,8 +853,8 @@ function addSteps(amount) {
 
 
     /*
-       idle 대화 중 걸으면
-       idle 대화를 종료
+       idle 대화 중 실제로 걸으면
+       idle 대사를 종료.
     */
 
     if (
@@ -852,8 +864,10 @@ function addSteps(amount) {
         dialogueMode =
             "normal";
 
+
         idleIndex =
             0;
+
 
         resetCharacterEmotion();
 
@@ -866,6 +880,11 @@ function addSteps(amount) {
     var newMilestone =
         getCurrentMilestone();
 
+
+    /*
+       새로운 마일스톤에 도달했으면
+       해당 대사를 보여준다.
+    */
 
     if (
         newMilestone !== oldMilestone
@@ -890,6 +909,7 @@ function detectStep(event) {
 
     var acceleration =
         event.accelerationIncludingGravity;
+
 
     if (!acceleration) {
 
@@ -921,10 +941,10 @@ function detectStep(event) {
 
 
     /*
-       걸음 감지 기준
+       걸음 감지
 
        기준값: 11
-       중복 판정 방지: 400ms
+       중복 방지: 400ms
     */
 
     if (
@@ -934,6 +954,7 @@ function detectStep(event) {
 
         lastStepTime =
             now;
+
 
         addSteps(1);
 
@@ -1020,6 +1041,7 @@ if (
             }
         );
 
+
         startMotionSensor();
 
     }
@@ -1064,9 +1086,6 @@ function handleDialogueClick() {
    대화창 클릭
    ================================================= */
 
-var dialogueBox =
-    document.getElementById("dialogueBox");
-
 if (
     dialogueBox
 ) {
@@ -1080,9 +1099,6 @@ if (
 /* =================================================
    캐릭터 클릭
    ================================================= */
-
-var characterArea =
-    document.getElementById("characterArea");
 
 if (
     characterArea
