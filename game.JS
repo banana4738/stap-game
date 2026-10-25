@@ -10,354 +10,31 @@
 var steps = 0;
 
 var currentStep = 0;
-
 var currentDialogueIndex = 0;
 
 var dialogueMode = "normal";
 
-
-/* =================================================
-   idle 상태
-   ================================================= */
-
 var idleTimer = null;
 
 var idleGroup = 0;
-
 var idleIndex = 0;
-
-
-/* =================================================
-   흔들기 상태
-   ================================================= */
-
-var shakeDialogueIndex = 0;
-
-var lastShakeTime = 0;
-
-
-/* =================================================
-   걸음 감지
-   ================================================= */
 
 var lastStepTime = 0;
 
 
 /* =================================================
-   오디오
+   기본 표정
+   ================================================= */
+
+var defaultEmotion = 5;
+
+
+/* =================================================
+   대사 알림음
    ================================================= */
 
 var audioContext = null;
 
-
-/* =================================================
-   DOM
-   ================================================= */
-
-var stepsElement =
-    document.getElementById("steps");
-
-var messageElement =
-    document.getElementById("message");
-
-var characterImage =
-    document.getElementById("characterImage");
-
-var dialogueBox =
-    document.getElementById("dialogueBox");
-
-
-/* =================================================
-   기본 대사
-   ================================================= */
-
-var dialogues = {
-
-    0: [
-
-        {
-            text: "너 말이야, 마법도 못 쓰면서 체력까지 없으면 어쩌려고 그래?",
-            emotion: 1
-        },
-
-        {
-            text: "내가 제대로 봐주지 않으면 안 되겠네.",
-            emotion: 2
-        },
-
-        {
-            text: "... 뭐야, 내가 무슨 얘기를 더 해주길 바라는 것처럼 보고.",
-            emotion: 3
-        },
-
-        {
-            text: "그렇게 잡담만 하다간 해 다 진다?",
-            emotion: 1
-        },
-
-        {
-            text: "자, 잔말 말고 걸어. 감독생!",
-            emotion: 5
-        }
-
-    ],
-
-
-    50: [
-
-        {
-            text: "50보 걸어놓고 칭찬 같은 거 바라는 건 아니지?",
-            emotion: 8
-        },
-
-        {
-            text: "집에서 걸어도 이것보다 더 나와.",
-            emotion: 3
-        }
-
-    ],
-
-
-    100: [
-
-        {
-            text: "출발은 좋네~",
-            emotion: 6
-        },
-
-        {
-            text: "그래도 이제 100보니까, 앞으로 9900걸음만 걸으면 되겠네!",
-            emotion: 2
-        },
-
-        {
-            text: "설마 9900걸음은 좀 아닌데~ 하고 들어갈 생각이라면 내 칭찬은 못 듣는걸로.",
-            emotion: 8
-        }
-
-    ],
-
-
-    500: [
-
-        {
-            text: "지금 500걸음 걷고 나 보는 거야?",
-            emotion: 1
-        },
-
-        {
-            text: "... 아니, 이정도면 기본으로 해야하는 거잖아?!",
-            emotion: 4
-        },
-
-        {
-            text: "당연히 더 걸어야지.",
-            emotion: 3
-        },
-
-        {
-            text: "특히 너는 체력 좀 키워야돼.",
-            emotion: 3
-        }
-
-    ],
-
-
-    1000: [
-
-        {
-            text: "이제 1000걸음이라...",
-            emotion: 7
-        },
-
-        {
-            text: "감독생도 하면 잘 하잖아~",
-            emotion: 6
-        },
-
-        {
-            text: "그치만 난 아직 땀 한방울도 안 흘렸거든?",
-            emotion: 5
-        },
-
-        {
-            text: "열심히 뛰라고.",
-            emotion: 2
-        }
-
-    ],
-
-
-    2500: [
-
-        {
-            text: "와, 솔직히 슬슬 말하기 귀찮은데~ 자도 돼?",
-            emotion: 6
-        },
-
-        {
-            text: "...",
-            emotion: 7
-        },
-
-        {
-            text: "알았어, 알겠으니까! 그렇게 절망하지 마.",
-            emotion: 3
-        },
-
-        {
-            text: "여기 있으면 되는 거지?",
-            emotion: 8
-        }
-
-    ],
-
-
-    5000: [
-
-        {
-            text: "숨 찼어? 아까보다 속도가 느려진 것 같은데.",
-            emotion: 7
-        },
-
-        {
-            text: "어쩔 수 없네, 좀 느긋하게 걸어도 괜찮으니까 천천히 해.",
-            emotion: 1
-        }
-
-    ],
-
-
-    10000: [
-
-        {
-            text: "정말 만보 채웠네, 솔직히 중간에 포기할 줄 알았는데 말이야.",
-            emotion: 2
-        },
-
-        {
-            text: "흐음~ 제법이잖아, 감독생.",
-            emotion: 8
-        },
-
-        {
-            text: "내일도 네가 할 지는 잘 모르겠지만, 응원은 할 테니까.",
-            emotion: 5
-        },
-
-        {
-            text: "수고했어.",
-            emotion: 6
-        }
-
-    ]
-
-};
-
-
-/* =================================================
-   오래 가만히 있을 때 나오는 대사
-   ================================================= */
-
-var idleDialogues = [
-
-    [
-
-        {
-            text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
-            emotion: 1
-        },
-
-        {
-            text: "내가 계속 응원... 아니, 응원이라고 해야하나.",
-            emotion: 7
-        },
-
-        {
-            text: "곁에 있을테니까.",
-            emotion: 5
-        }
-
-    ],
-
-
-    [
-
-        {
-            text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
-            emotion: 1
-        },
-
-        {
-            text: "...",
-            emotion: 7
-        },
-
-        {
-            text: "감독생? 나 그런 거 안 봐주거든.",
-            emotion: 4
-        },
-
-        {
-            text: "내가 이런 거에선 좀 깐깐해서 말이야.",
-            emotion: 3
-        },
-
-        {
-            text: "일어나!",
-            emotion: 4
-        }
-
-    ]
-
-];
-
-
-/* =================================================
-   폰 흔들기 대사
-   ================================================= */
-
-var shakeDialogues = [
-
-    {
-        text: "... 너 뭐하냐?",
-        emotion: 4
-    },
-
-    {
-        text: "지금 안 걷고 있지? 어?",
-        emotion: 1
-    },
-
-    {
-        text: "잔머리 쓰지 말고 똑바로 걸으라고!",
-        emotion: 4
-    }
-
-];
-
-
-/* =================================================
-   마일스톤
-   ================================================= */
-
-var milestones = [
-
-    0,
-    50,
-    100,
-    500,
-    1000,
-    2500,
-    5000,
-    10000
-
-];
-
-
-/* =================================================
-   오디오 초기화
-   ================================================= */
 
 function unlockAudio() {
 
@@ -365,18 +42,18 @@ function unlockAudio() {
         audioContext === null
     ) {
 
-        var AudioContextClass =
+        var AudioContext =
             window.AudioContext ||
             window.webkitAudioContext;
 
-        if (!AudioContextClass) {
+        if (!AudioContext) {
 
             return;
 
         }
 
         audioContext =
-            new AudioContextClass();
+            new AudioContext();
 
     }
 
@@ -393,20 +70,23 @@ function unlockAudio() {
 }
 
 
-/* =================================================
-   띠링띠링
-   ================================================= */
-
-function playNotificationSound() {
-
-    unlockAudio();
-
+function playDialogueSound() {
 
     if (
         audioContext === null
     ) {
 
         return;
+
+    }
+
+
+    if (
+        audioContext.state ===
+        "suspended"
+    ) {
+
+        audioContext.resume();
 
     }
 
@@ -425,7 +105,6 @@ function playNotificationSound() {
     oscillator1.type =
         "sine";
 
-
     oscillator1.frequency.setValueAtTime(
         880,
         now
@@ -437,16 +116,14 @@ function playNotificationSound() {
         now
     );
 
-
     gain1.gain.exponentialRampToValueAtTime(
         0.12,
-        now + 0.02
+        now + 0.01
     );
-
 
     gain1.gain.exponentialRampToValueAtTime(
         0.0001,
-        now + 0.25
+        now + 0.13
     );
 
 
@@ -460,7 +137,7 @@ function playNotificationSound() {
     oscillator1.start(now);
 
     oscillator1.stop(
-        now + 0.27
+        now + 0.14
     );
 
 
@@ -474,28 +151,25 @@ function playNotificationSound() {
     oscillator2.type =
         "sine";
 
-
     oscillator2.frequency.setValueAtTime(
-        1174,
-        now + 0.16
+        1174.66,
+        now + 0.10
     );
 
 
     gain2.gain.setValueAtTime(
         0.0001,
-        now + 0.16
+        now + 0.10
     );
-
 
     gain2.gain.exponentialRampToValueAtTime(
         0.12,
-        now + 0.18
+        now + 0.11
     );
-
 
     gain2.gain.exponentialRampToValueAtTime(
         0.0001,
-        now + 0.43
+        now + 0.24
     );
 
 
@@ -507,14 +181,236 @@ function playNotificationSound() {
 
 
     oscillator2.start(
-        now + 0.16
+        now + 0.10
     );
 
     oscillator2.stop(
-        now + 0.45
+        now + 0.25
     );
 
 }
+
+
+/* =================================================
+   화면 요소
+   ================================================= */
+
+var stepsElement =
+    document.getElementById("steps");
+
+var messageElement =
+    document.getElementById("message");
+
+var characterImage =
+    document.getElementById("characterImage");
+
+
+/* =================================================
+   일반 대사
+   ================================================= */
+
+var dialogues = {
+
+    0: [
+        {
+            text: "너 말이야, 마법도 못 쓰면서 체력까지 없으면 어쩌려고 그래?",
+            emotion: 1
+        },
+        {
+            text: "내가 제대로 봐주지 않으면 안 되겠네.",
+            emotion: 2
+        },
+        {
+            text: "... 뭐야, 내가 무슨 얘기를 더 해주길 바라는 것처럼 보고.",
+            emotion: 3
+        },
+        {
+            text: "그렇게 잡담만 하다간 해 다 진다?",
+            emotion: 1
+        },
+        {
+            text: "자, 잔말 말고 걸어. 감독생!",
+            emotion: 5
+        }
+    ],
+
+    50: [
+        {
+            text: "50보 걸어놓고 칭찬 같은 거 바라는 건 아니지?",
+            emotion: 8
+        },
+        {
+            text: "집에서 걸어도 이것보다 더 나와.",
+            emotion: 3
+        }
+    ],
+
+    100: [
+        {
+            text: "출발은 좋네~",
+            emotion: 6
+        },
+        {
+            text: "그래도 이제 100보니까, 앞으로 9900걸음만 걸으면 되겠네!",
+            emotion: 2
+        },
+        {
+            text: "설마 9900걸음은 좀 아닌데~ 하고 들어갈 생각이라면 내 칭찬은 못 듣는걸로.",
+            emotion: 8
+        }
+    ],
+
+    500: [
+        {
+            text: "지금 500걸음 걷고 나 보는 거야?",
+            emotion: 1
+        },
+        {
+            text: "... 아니, 이정도면 기본으로 해야하는 거잖아?!",
+            emotion: 4
+        },
+        {
+            text: "당연히 더 걸어야지.",
+            emotion: 3
+        },
+        {
+            text: "특히 너는 체력 좀 키워야돼.",
+            emotion: 3
+        }
+    ],
+
+    1000: [
+        {
+            text: "이제 1000걸음이라...",
+            emotion: 7
+        },
+        {
+            text: "감독생도 하면 잘 하잖아~",
+            emotion: 6
+        },
+        {
+            text: "그치만 난 아직 땀 한방울도 안 흘렸거든?",
+            emotion: 5
+        },
+        {
+            text: "열심히 뛰라고.",
+            emotion: 2
+        }
+    ],
+
+    2500: [
+        {
+            text: "와, 솔직히 슬슬 말하기 귀찮은데~ 자도 돼?",
+            emotion: 6
+        },
+        {
+            text: "...",
+            emotion: 7
+        },
+        {
+            text: "알았어, 알겠으니까! 그렇게 절망하지 마.",
+            emotion: 3
+        },
+        {
+            text: "여기 있으면 되는 거지?",
+            emotion: 8
+        }
+    ],
+
+    5000: [
+        {
+            text: "숨 찼어? 아까보다 속도가 느려진 것 같은데.",
+            emotion: 7
+        },
+        {
+            text: "어쩔 수 없네, 좀 느긋하게 걸어도 괜찮으니까 천천히 해.",
+            emotion: 1
+        }
+    ],
+
+    10000: [
+        {
+            text: "정말 만보 채웠네, 솔직히 중간에 포기할 줄 알았는데 말이야.",
+            emotion: 2
+        },
+        {
+            text: "흐음~ 제법이잖아, 감독생.",
+            emotion: 8
+        },
+        {
+            text: "내일도 네가 할 지는 잘 모르겠지만, 응원은 할 테니까.",
+            emotion: 5
+        },
+        {
+            text: "수고했어.",
+            emotion: 6
+        }
+    ]
+
+};
+
+
+/* =================================================
+   마일스톤
+   ================================================= */
+
+var milestones = [
+    0,
+    50,
+    100,
+    500,
+    1000,
+    2500,
+    5000,
+    10000
+];
+
+
+/* =================================================
+   40초 후 대사
+   ================================================= */
+
+var idleDialogues = [
+
+    [
+        {
+            text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
+            emotion: 1
+        },
+        {
+            text: "내가 계속 응원... 아니, 응원이라고 해야하나.",
+            emotion: 7
+        },
+        {
+            text: "곁에 있을테니까.",
+            emotion: 5
+        }
+    ],
+
+    [
+        {
+            text: "슬슬 일어나, 언제까지 늘어져있을 생각이야?",
+            emotion: 1
+        },
+        {
+            text: "...",
+            emotion: 7
+        },
+        {
+            text: "감독생? 나 그런 거 안 봐주거든.",
+            emotion: 4
+        },
+        {
+            text: "내가 이런 거에선 좀 깐깐해서 말이야.",
+            emotion: 3
+        },
+        {
+            text: "일어나!",
+            emotion: 4
+        }
+    ]
+
+];
 
 
 /* =================================================
@@ -537,7 +433,6 @@ function getCurrentMilestone() {
 
     var result = 0;
 
-
     for (
         var i = 0;
         i < milestones.length;
@@ -555,7 +450,6 @@ function getCurrentMilestone() {
 
     }
 
-
     return result;
 
 }
@@ -571,14 +465,25 @@ function clearIdleTimer() {
         idleTimer !== null
     ) {
 
-        clearTimeout(
-            idleTimer
-        );
+        clearTimeout(idleTimer);
 
-        idleTimer =
-            null;
+        idleTimer = null;
 
     }
+
+}
+
+
+/* =================================================
+   기본 표정으로 복구
+   ================================================= */
+
+function resetCharacterEmotion() {
+
+    characterImage.src =
+        "images/" +
+        defaultEmotion +
+        ".png";
 
 }
 
@@ -597,21 +502,16 @@ function startDialogue(step) {
 
     }
 
-
     clearIdleTimer();
-
 
     dialogueMode =
         "normal";
 
-
     currentStep =
         step;
 
-
     currentDialogueIndex =
         0;
-
 
     showNormalDialogue();
 
@@ -627,17 +527,14 @@ function showNormalDialogue() {
     var lines =
         dialogues[currentStep];
 
-
     if (!lines) {
 
         return;
 
     }
 
-
     var dialogue =
         lines[currentDialogueIndex];
-
 
     if (!dialogue) {
 
@@ -645,24 +542,21 @@ function showNormalDialogue() {
 
     }
 
-
     messageElement.textContent =
         dialogue.text;
-
 
     characterImage.src =
         "images/" +
         dialogue.emotion +
         ".png";
 
-
-    playNotificationSound();
+    playDialogueSound();
 
 }
 
 
 /* =================================================
-   일반 대사 다음
+   일반 대사 클릭
    ================================================= */
 
 function nextNormalDialogue() {
@@ -675,10 +569,8 @@ function nextNormalDialogue() {
 
     }
 
-
     var lines =
         dialogues[currentStep];
-
 
     if (!lines) {
 
@@ -701,13 +593,20 @@ function nextNormalDialogue() {
     }
 
 
+    /*
+       일반 대사가 끝나면
+       반드시 기본 표정 5번으로 복구
+    */
+
+    resetCharacterEmotion();
+
     resetIdleTimer();
 
 }
 
 
 /* =================================================
-   오래 가만히 있기 이벤트 시작
+   idle 대화 시작
    ================================================= */
 
 function startIdleDialogue() {
@@ -720,24 +619,13 @@ function startIdleDialogue() {
 
     }
 
-
     clearIdleTimer();
-
 
     dialogueMode =
         "idle";
 
-
-    idleGroup =
-        0;
-
-
     idleIndex =
         0;
-
-
-    playNotificationSound();
-
 
     showIdleDialogue();
 
@@ -753,17 +641,14 @@ function showIdleDialogue() {
     var group =
         idleDialogues[idleGroup];
 
-
     if (!group) {
 
         return;
 
     }
 
-
     var dialogue =
         group[idleIndex];
-
 
     if (!dialogue) {
 
@@ -771,21 +656,21 @@ function showIdleDialogue() {
 
     }
 
-
     messageElement.textContent =
         dialogue.text;
-
 
     characterImage.src =
         "images/" +
         dialogue.emotion +
         ".png";
 
+    playDialogueSound();
+
 }
 
 
 /* =================================================
-   idle 다음
+   idle 대사 클릭
    ================================================= */
 
 function nextIdleDialogue() {
@@ -801,7 +686,6 @@ function nextIdleDialogue() {
 
     var group =
         idleDialogues[idleGroup];
-
 
     if (!group) {
 
@@ -819,77 +703,37 @@ function nextIdleDialogue() {
 
         showIdleDialogue();
 
-
-        /*
-           "곁에 있을테니까."가 나온 뒤
-           30초 동안 기다린다.
-        */
-
-        if (
-            idleGroup === 0 &&
-            idleIndex === group.length - 1
-        ) {
-
-            dialogueMode =
-                "idleWait";
-
-
-            clearIdleTimer();
-
-
-            idleTimer =
-                setTimeout(
-                    function() {
-
-                        if (
-                            dialogueMode !==
-                            "idleWait"
-                        ) {
-
-                            return;
-
-                        }
-
-
-                        idleGroup =
-                            1;
-
-
-                        idleIndex =
-                            0;
-
-
-                        dialogueMode =
-                            "idle";
-
-
-                        playNotificationSound();
-
-
-                        showIdleDialogue();
-
-                    },
-                    30000
-                );
-
-        }
-
-
         return;
 
     }
 
 
+    /*
+       idle 대사가 끝나면
+       반드시 기본 표정 5번으로 복구
+    */
+
     dialogueMode =
         "normal";
 
-
-    idleGroup =
-        0;
-
-
     idleIndex =
         0;
+
+    resetCharacterEmotion();
+
+
+    /*
+       다음 idle 대사 그룹을 준비
+    */
+
+    if (
+        idleGroup <
+        idleDialogues.length - 1
+    ) {
+
+        idleGroup++;
+
+    }
 
 
     resetIdleTimer();
@@ -898,13 +742,12 @@ function nextIdleDialogue() {
 
 
 /* =================================================
-   idle 타이머
+   idle 40초 타이머
    ================================================= */
 
 function resetIdleTimer() {
 
     clearIdleTimer();
-
 
     if (
         steps >= 10000
@@ -913,7 +756,6 @@ function resetIdleTimer() {
         return;
 
     }
-
 
     if (
         dialogueMode !== "normal"
@@ -929,8 +771,7 @@ function resetIdleTimer() {
             function() {
 
                 if (
-                    dialogueMode ===
-                    "normal"
+                    dialogueMode === "normal"
                 ) {
 
                     startIdleDialogue();
@@ -938,122 +779,14 @@ function resetIdleTimer() {
                 }
 
             },
-            30000
+            40000
         );
 
 }
 
 
 /* =================================================
-   흔들기 이벤트 시작
-   ================================================= */
-
-function startShakeDialogue() {
-
-    if (
-        dialogueMode === "idle" ||
-        dialogueMode === "idleWait"
-    ) {
-
-        return;
-
-    }
-
-
-    clearIdleTimer();
-
-
-    dialogueMode =
-        "shake";
-
-
-    shakeDialogueIndex =
-        0;
-
-
-    showShakeDialogue();
-
-}
-
-
-/* =================================================
-   흔들기 대사 표시
-   ================================================= */
-
-function showShakeDialogue() {
-
-    var dialogue =
-        shakeDialogues[
-            shakeDialogueIndex
-        ];
-
-
-    if (!dialogue) {
-
-        return;
-
-    }
-
-
-    messageElement.textContent =
-        dialogue.text;
-
-
-    characterImage.src =
-        "images/" +
-        dialogue.emotion +
-        ".png";
-
-
-    playNotificationSound();
-
-}
-
-
-/* =================================================
-   흔들기 다음
-   ================================================= */
-
-function nextShakeDialogue() {
-
-    if (
-        dialogueMode !== "shake"
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        shakeDialogueIndex <
-        shakeDialogues.length - 1
-    ) {
-
-        shakeDialogueIndex++;
-
-        showShakeDialogue();
-
-        return;
-
-    }
-
-
-    dialogueMode =
-        "normal";
-
-
-    shakeDialogueIndex =
-        0;
-
-
-    resetIdleTimer();
-
-}
-
-
-/* =================================================
-   걸음 추가
+   걸음 수 추가
    ================================================= */
 
 function addSteps(amount) {
@@ -1061,9 +794,7 @@ function addSteps(amount) {
     var oldMilestone =
         getCurrentMilestone();
 
-
     steps += amount;
-
 
     if (
         steps > 10000
@@ -1074,30 +805,25 @@ function addSteps(amount) {
 
     }
 
-
     updateStepDisplay();
 
 
     if (
-        dialogueMode === "idle" ||
-        dialogueMode === "idleWait"
+        dialogueMode === "idle"
     ) {
-
-        clearIdleTimer();
-
 
         dialogueMode =
             "normal";
 
-
         idleIndex =
             0;
 
-
-        idleGroup =
-            0;
+        resetCharacterEmotion();
 
     }
+
+
+    resetIdleTimer();
 
 
     var newMilestone =
@@ -1112,12 +838,9 @@ function addSteps(amount) {
             newMilestone
         );
 
-        return;
+        resetIdleTimer();
 
     }
-
-
-    resetIdleTimer();
 
 }
 
@@ -1130,7 +853,6 @@ function detectStep(event) {
 
     var acceleration =
         event.accelerationIncludingGravity;
-
 
     if (!acceleration) {
 
@@ -1162,41 +884,21 @@ function detectStep(event) {
 
 
     /*
-       너무 빠르게 여러 번 세는 것 방지
+       기존보다 조금 널널하게
+       걸음 판정을 잡음.
+
+       휴대폰을 실제로 들고 걸을 때
+       움직임이 약해도 걸음으로 인식할 수 있도록
+       기준을 11 -> 10.3으로 낮춤.
     */
 
     if (
-        now - lastStepTime < 450
-    ) {
-
-        return;
-
-    }
-
-
-    /*
-       중력값 약 9.8을 기준으로
-       실제 움직임을 확인한다.
-    */
-
-    var movement =
-        Math.abs(
-            magnitude - 9.8
-        );
-
-
-    /*
-       현재 잘 올라가는
-       기존 판정값 유지
-    */
-
-    if (
-        movement > 1.7
+        magnitude > 10.3 &&
+        now - lastStepTime > 300
     ) {
 
         lastStepTime =
             now;
-
 
         addSteps(1);
 
@@ -1206,418 +908,108 @@ function detectStep(event) {
 
 
 /* =================================================
-   흔들기 감지
+   걷기 패턴 분석
    ================================================= */
 
 
 /*
-   아까 잘 작동했던 방식.
-
-   센서 이벤트 개수를 그대로 세지 않고
-   실제 움직임의 방향이 바뀌는 것을
-   하나의 흔들기로 계산한다.
+   최근 걸음이 발생한 시간들
 */
 
-
-var shakeCount = 0;
-
-var shakeStartTime = 0;
-
-var shakeMoving = false;
-
-var shakeLastMoveTime = 0;
-
-var lastShakeDirection = 0;
+var recentStepTimes = [];
 
 
 /*
-   흔들기 민감도
-
-   너무 작은 움직임은 무시한다.
+   걷고 있다고 판단할 시간
 */
 
-var shakeThreshold = 6.0;
+var walkingTimeout = 1800;
 
 
 /*
-   실제 필요한 흔들기 횟수
-
-   약 10번.
+   최근 걸음 기록
 */
 
-var shakeRequiredCount = 10;
-
-
-/*
-   5초 안에 10번 흔들기.
-*/
-
-var shakeWindow = 5000;
-
-
-/*
-   한 번 흔든 뒤
-   다음 흔들기까지 필요한 휴식 시간.
-*/
-
-var shakeRestTime = 180;
-
-
-/*
-   이벤트 발생 후 다시 감지하기 전
-   최소 간격.
-*/
-
-var shakeMinInterval = 100;
-
-
-/*
-   흔들기 이벤트 발생 후
-   다시 흔들기 이벤트를 받을 때까지
-   잠깐 기다린다.
-*/
-
-var shakeCooldown = 4000;
-
-var shakeCooldownUntil = 0;
-
-
-/* =================================================
-   흔들기 감지
-   ================================================= */
-
-function detectShake(event) {
-
-    var acceleration =
-        event.accelerationIncludingGravity;
-
-
-    if (!acceleration) {
-
-        return;
-
-    }
-
-
-    /*
-       흔들기 이벤트가 이미 나왔다면
-       현재 대화가 끝날 때까지
-       추가 흔들기를 무시한다.
-    */
-
-    if (
-        dialogueMode !== "normal"
-    ) {
-
-        shakeCount = 0;
-
-        shakeStartTime = 0;
-
-        shakeMoving = false;
-
-        lastShakeDirection = 0;
-
-        return;
-
-    }
-
-
-    /*
-       현재 일반 대사가 아직 끝나지 않았다면
-       흔들기 이벤트 금지.
-    */
-
-    var lines =
-        dialogues[currentStep];
-
-
-    if (
-        lines &&
-        currentDialogueIndex <
-        lines.length - 1
-    ) {
-
-        shakeCount = 0;
-
-        shakeStartTime = 0;
-
-        shakeMoving = false;
-
-        lastShakeDirection = 0;
-
-        return;
-
-    }
-
-
-    var x =
-        acceleration.x || 0;
-
-    var y =
-        acceleration.y || 0;
-
-    var z =
-        acceleration.z || 0;
-
+function registerStepPattern() {
 
     var now =
         new Date().getTime();
 
 
-    /*
-       흔들기 이벤트 후 쿨다운.
-    */
-
-    if (
-        now < shakeCooldownUntil
-    ) {
-
-        return;
-
-    }
+    recentStepTimes.push(
+        now
+    );
 
 
     /*
-       세 축 중 가장 크게 움직이는 축을 선택한다.
-
-       어느 방향으로 폰을 흔들어도
-       어느 정도 인식할 수 있도록 한다.
+       너무 오래된 기록 제거
     */
 
-    var axisValue;
-
-
-    if (
-        Math.abs(x) >= Math.abs(y) &&
-        Math.abs(x) >= Math.abs(z)
-    ) {
-
-        axisValue = x;
-
-    }
-
-    else if (
-        Math.abs(y) >= Math.abs(x) &&
-        Math.abs(y) >= Math.abs(z)
-    ) {
-
-        axisValue = y;
-
-    }
-
-    else {
-
-        axisValue = z;
-
-    }
-
-
-    /*
-       작은 움직임은 무시한다.
-    */
-
-    if (
-        Math.abs(axisValue) <
-        shakeThreshold
-    ) {
-
-        /*
-           움직임이 끝난 뒤
-           다음 흔들기를 받을 준비.
-        */
-
-        if (
-            shakeMoving &&
-            now - shakeLastMoveTime >=
-            shakeRestTime
-        ) {
-
-            shakeMoving = false;
-
-        }
-
-        return;
-
-    }
-
-
-    /*
-       현재 움직임이 계속되는 동안에는
-       여러 devicemotion 이벤트가 발생해도
-       하나의 흔들기로 취급한다.
-    */
-
-    if (
-        shakeMoving
-    ) {
-
-        shakeLastMoveTime =
-            now;
-
-        return;
-
-    }
-
-
-    /*
-       너무 빠른 중복 이벤트 방지.
-    */
-
-    if (
-        now - shakeLastMoveTime <
-        shakeMinInterval
-    ) {
-
-        return;
-
-    }
-
-
-    /*
-       새로운 흔들기 시작.
-    */
-
-    shakeMoving = true;
-
-    shakeLastMoveTime =
-        now;
-
-
-    /*
-       흔들기 전체 시간 시작.
-    */
-
-    if (
-        shakeStartTime === 0
-    ) {
-
-        shakeStartTime =
-            now;
-
-        shakeCount =
-            0;
-
-    }
-
-
-    /*
-       5초를 넘겼으면
-       다시 처음부터 센다.
-    */
-
-    if (
-        now - shakeStartTime >
-        shakeWindow
-    ) {
-
-        shakeStartTime =
-            now;
-
-        shakeCount =
-            0;
-
-        lastShakeDirection =
-            0;
-
-    }
-
-
-    /*
-       현재 방향.
-    */
-
-    var direction;
-
-
-    if (
-        axisValue > 0
-    ) {
-
-        direction = 1;
-
-    }
-
-    else {
-
-        direction = -1;
-
-    }
-
-
-    /*
-       첫 흔들기.
-    */
-
-    if (
-        shakeCount === 0
-    ) {
-
-        shakeCount =
-            1;
-
-        lastShakeDirection =
-            direction;
-
-    }
-
-
-    /*
-       방향이 바뀌었을 때만
-       새로운 흔들기로 센다.
-    */
-
-    else if (
-        direction !==
-        lastShakeDirection
-    ) {
-
-        shakeCount++;
-
-        lastShakeDirection =
-            direction;
-
-    }
-
-
-    /*
-       10번 흔들면 이벤트 발생.
-    */
-
-    if (
-        shakeCount >=
-        shakeRequiredCount
-    ) {
-
-        lastShakeTime =
-            now;
-
-
-        shakeCooldownUntil =
-            now +
-            shakeCooldown;
-
-
-        shakeCount =
-            0;
-
-
-        shakeStartTime =
-            0;
-
-
-        shakeMoving =
-            false;
-
-
-        lastShakeDirection =
-            0;
-
-
-        startShakeDialogue();
-
-    }
+    recentStepTimes =
+        recentStepTimes.filter(
+            function(time) {
+
+                return (
+                    now - time <= 2500
+                );
+
+            }
+        );
 
 }
+
+
+/*
+   현재 걷는 중인지 확인
+*/
+
+function isWalking() {
+
+    var now =
+        new Date().getTime();
+
+
+    recentStepTimes =
+        recentStepTimes.filter(
+            function(time) {
+
+                return (
+                    now - time <=
+                    walkingTimeout
+                );
+
+            }
+        );
+
+
+    /*
+       최근 1.8초 안에
+       걸음이 2번 이상 있으면
+       걷는 중으로 판단
+    */
+
+    return (
+        recentStepTimes.length >= 2
+    );
+
+}
+
+
+/* =================================================
+   걸음 감지에 패턴 기록 추가
+   ================================================= */
+
+var originalAddSteps =
+    addSteps;
+
+addSteps =
+    function(amount) {
+
+        registerStepPattern();
+
+        originalAddSteps(amount);
+
+    };
 
 
 /* =================================================
@@ -1631,12 +1023,6 @@ function startMotionSensor() {
         detectStep
     );
 
-
-    window.addEventListener(
-        "devicemotion",
-        detectShake
-    );
-
 }
 
 
@@ -1645,8 +1031,7 @@ function startMotionSensor() {
    ================================================= */
 
 if (
-    typeof DeviceMotionEvent !==
-    "undefined"
+    typeof DeviceMotionEvent !== "undefined"
 ) {
 
     if (
@@ -1667,8 +1052,7 @@ if (
                         function(permission) {
 
                             if (
-                                permission ===
-                                "granted"
+                                permission === "granted"
                             ) {
 
                                 startMotionSensor();
@@ -1680,9 +1064,7 @@ if (
                     .catch(
                         function(error) {
 
-                            console.log(
-                                error
-                            );
+                            console.log(error);
 
                         }
                     );
@@ -1700,6 +1082,14 @@ if (
 
     else {
 
+        document.body.addEventListener(
+            "click",
+            unlockAudio,
+            {
+                once: true
+            }
+        );
+
         startMotionSensor();
 
     }
@@ -1708,60 +1098,12 @@ if (
 
 
 /* =================================================
-   첫 터치에서 오디오 준비
-   ================================================= */
-
-document.addEventListener(
-    "click",
-    unlockAudio,
-    {
-        once: true
-    }
-);
-
-
-/* =================================================
    화면 클릭
    ================================================= */
 
-function handleDialogueClick(event) {
-
-    if (
-        event
-    ) {
-
-        event.stopPropagation();
-
-    }
-
+function handleDialogueClick() {
 
     unlockAudio();
-
-
-    /*
-       "곁에 있을테니까." 이후
-       30초 기다리는 동안에는
-       클릭해도 넘어가지 않는다.
-    */
-
-    if (
-        dialogueMode === "idleWait"
-    ) {
-
-        return;
-
-    }
-
-
-    if (
-        dialogueMode === "shake"
-    ) {
-
-        nextShakeDialogue();
-
-        return;
-
-    }
 
 
     if (
@@ -1792,14 +1134,32 @@ function handleDialogueClick(event) {
    대화창 클릭
    ================================================= */
 
+var dialogueBox =
+    document.getElementById("dialogueBox");
+
 if (
     dialogueBox
 ) {
 
-    dialogueBox.addEventListener(
-        "click",
-        handleDialogueClick
-    );
+    dialogueBox.onclick =
+        handleDialogueClick;
+
+}
+
+
+/* =================================================
+   캐릭터 클릭
+   ================================================= */
+
+var characterArea =
+    document.getElementById("characterArea");
+
+if (
+    characterArea
+) {
+
+    characterArea.onclick =
+        handleDialogueClick;
 
 }
 
