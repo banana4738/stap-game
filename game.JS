@@ -716,6 +716,37 @@ function showIdleDialogue() {
 
     playDialogueSound();
 
+
+    /*
+       idle 대사가 남아 있으면
+       30초 후 자동으로 다음 대사.
+    */
+
+    if (
+        idleIndex <
+        lines.length - 1
+    ) {
+
+        clearIdleTimer();
+
+        idleTimer =
+            setTimeout(
+                function() {
+
+                    if (
+                        dialogueMode === "idle"
+                    ) {
+
+                        nextIdleDialogue();
+
+                    }
+
+                },
+                30000
+            );
+
+    }
+
 }
 
 
