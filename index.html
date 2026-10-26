@@ -12,6 +12,35 @@
 
     <title>감독생 만보기</title>
 
+    <!-- 앱 설치 설정 -->
+    <link rel="manifest" href="manifest.json">
+
+    <meta
+        name="theme-color"
+        content="#efa0c7"
+    >
+
+    <meta
+        name="mobile-web-app-capable"
+        content="yes"
+    >
+
+    <meta
+        name="apple-mobile-web-app-capable"
+        content="yes"
+    >
+
+    <meta
+        name="apple-mobile-web-app-status-bar-style"
+        content="default"
+    >
+
+    <meta
+        name="apple-mobile-web-app-title"
+        content="감독생 만보기"
+    >
+
+
     <style>
 
         * {
@@ -308,6 +337,46 @@
 <!-- game.JS 연결 -->
 
 <script src="game.JS"></script>
+
+
+<!-- 앱 기능 -->
+
+<script>
+
+    if ("serviceWorker" in navigator) {
+
+        window.addEventListener(
+            "load",
+            function() {
+
+                navigator.serviceWorker
+                    .register("service-worker.js")
+                    .then(
+                        function() {
+
+                            console.log(
+                                "앱 서비스 준비 완료"
+                            );
+
+                        }
+                    )
+                    .catch(
+                        function(error) {
+
+                            console.log(
+                                "서비스 등록 실패:",
+                                error
+                            );
+
+                        }
+                    );
+
+            }
+        );
+
+    }
+
+</script>
 
 
 </body>
